@@ -2,111 +2,387 @@
 <html>
 <head>
   <meta charset="utf-8"/>
-  <title>Campus Clubs & Events — Demo (SQLite)</title>
+  <title>Campus Clubs & Events — Phase 2 Demo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <style>
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;margin:24px;max-width:900px}
-    section{border:1px solid #ddd;border-radius:8px;padding:16px;margin-bottom:16px}
-    label{display:block;margin-top:8px} input,select,button{font:inherit}
-    input,select{padding:8px;width:100%;max-width:420px} button{padding:8px 12px;margin-top:10px}
-    pre{background:#0b1020;color:#e6edf3;padding:12px;border-radius:10px;overflow:auto;max-height:240px}
-    table{width:100%;border-collapse:collapse} th,td{padding:8px;border-bottom:1px solid #eee;text-align:left}
+    :root{color-scheme:light dark;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+    body{margin:24px;max-width:1100px}
+    section{border:1px solid #d0d7de;border-radius:12px;padding:18px;margin-bottom:18px;background:rgba(255,255,255,0.9)}
+    label{display:block;margin-top:8px;font-weight:600}
+    input,select,textarea{width:100%;max-width:420px;padding:8px;margin-top:4px;font:inherit}
+    textarea{min-height:80px}
+    button{margin-top:10px;padding:8px 12px;font:inherit;cursor:pointer}
+    table{width:100%;border-collapse:collapse;margin-top:12px}
+    th,td{border-bottom:1px solid #eaecef;padding:8px;text-align:left;font-size:0.95rem}
+    .row{display:flex;flex-wrap:wrap;gap:18px}
+    .row>div{flex:1 1 320px}
+    pre{background:#0b1020;color:#e6edf3;padding:12px;border-radius:10px;overflow:auto;max-height:200px}
+    small{display:block;color:#57606a;margin-top:4px}
   </style>
 </head>
 <body>
-  <h1>Campus Clubs & Events — Local Demo (SQLite)</h1>
-  <p>Backend: <code>http://localhost:8000</code> | Frontend: <code>http://localhost:3000</code></p>
+  <h1>Campus Clubs & Events</h1>
+  <p>FastAPI backend <code>http://localhost:8000</code> + Express static frontend <code>http://localhost:3000</code>.</p>
 
   <section>
-    <h2>1) Create Event</h2>
-    <label>Title <input id="title" value="Hack Night"></label>
-    <label>Starts At (ISO) <input id="starts_at"></label>
-    <label>Location <input id="location" value="Student Union"></label>
-    <label>Capacity <input id="capacity" type="number" value="2"></label>
-    <label>Price (cents) <input id="price_cents" type="number" value="0"></label>
-    <label>Category <input id="category" value="tech"></label>
-    <button onclick="createEvent()">Create</button>
-    <pre id="create_out"></pre>
+    <h2>Persona headers</h2>
+    <div class="row">
+      <div>
+        <label>Email <input id="persona_email" value="student@example.edu"></label>
+        <label>Role
+          <select id="persona_role">
+            <option value="student">student</option>
+            <option value="leader">leader</option>
+            <option value="admin">admin</option>
+          </select>
+        </label>
+        <small>These map to <code>X-User-Email</code> and <code>X-User-Role</code> headers.</small>
+      </div>
+      <div>
+        <label>Club Leader Quick-fill
+          <button type="button" onclick="setPersona('leader@school.edu','leader')">AI Club Leader</button>
+        </label>
+        <label>Admin Quick-fill
+          <button type="button" onclick="setPersona('admin@school.edu','admin')">Admin</button>
+        </label>
+      </div>
+    </div>
   </section>
 
   <section>
-    <h2>2) List / Search Events</h2>
-    <label>Category <input id="f_category" placeholder="e.g. tech"></label>
-    <label>Free only
-      <select id="f_free"><option value="">(any)</option><option value="true">true</option></select>
-    </label>
-    <button onclick="listEvents()">List</button>
+    <h2>Discover events</h2>
+    <div class="row">
+      <div>
+        <label>Starts after <input id="filter_start" placeholder="2024-09-01T00:00:00Z"></label>
+        <label>Ends before <input id="filter_end" placeholder="2024-09-30T23:59:59Z"></label>
+        <label>Category <input id="filter_category" placeholder="tech"></label>
+        <label>Location contains <input id="filter_location" placeholder="ENG"></label>
+        <label>Sort
+          <select id="filter_sort">
+            <option value="date">date</option>
+            <option value="popularity">popularity</option>
+          </select>
+        </label>
+        <label><input type="checkbox" id="filter_free"> Free only</label>
+        <button onclick="listEvents()">Run search</button>
+        <button onclick="loadTrending()">Trending</button>
+      </div>
+      <div>
+        <h3>Create event</h3>
+        <label>Title <input id="event_title" value="Hack Night"></label>
+        <label>Starts At <input id="event_starts"></label>
+        <label>Location <input id="event_location" value="Student Union"></label>
+        <label>Capacity <input type="number" id="event_capacity" value="5"></label>
+        <label>Price (cents) <input type="number" id="event_price" value="0"></label>
+        <label>Category <input id="event_category" value="tech"></label>
+        <label>Club ID (optional) <input type="number" id="event_club"></label>
+        <button onclick="createEvent()">Create</button>
+        <button onclick="registerEvent()">Register (ID below)</button>
+        <label>Event ID to register <input type="number" id="register_event_id" value="1"></label>
+      </div>
+    </div>
     <table>
-      <thead><tr><th>ID</th><th>Title</th><th>When</th><th>Cap</th><th>Price</th><th>Category</th></tr></thead>
+      <thead>
+        <tr><th>ID</th><th>Title</th><th>When</th><th>Location</th><th>Category</th><th>Club</th><th>Capacity</th><th>Registered</th></tr>
+      </thead>
       <tbody id="events_tbody"></tbody>
     </table>
+    <h3>Trending</h3>
+    <ul id="trending_list"></ul>
   </section>
 
   <section>
-    <h2>3) Register</h2>
-    <label>Event ID <input id="event_id" type="number" value="1"></label>
-    <button onclick="register()">Register</button>
-    <pre id="reg_out"></pre>
+    <h2>Clubs directory</h2>
+    <div class="row">
+      <div>
+        <button onclick="loadClubs()">Refresh clubs</button>
+        <ul id="club_list"></ul>
+      </div>
+      <div>
+        <h3>Create a club</h3>
+        <label>Name <input id="club_name" placeholder="Board Games"></label>
+        <label>Description <textarea id="club_desc" placeholder="What does this club do?"></textarea></label>
+        <button onclick="createClub()">Submit club (pending approval)</button>
+        <pre id="club_create_result"></pre>
+        <h3>Join a club</h3>
+        <label>Club ID <input type="number" id="join_club_id"></label>
+        <button onclick="joinClub()">Request to join</button>
+        <pre id="club_join_result"></pre>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Club page</h2>
+    <label>Club ID <input type="number" id="club_detail_id" value="1"></label>
+    <button onclick="loadClubDetail()">Load club</button>
+    <div id="club_detail"></div>
+
+    <div class="row">
+      <div>
+        <h3>Leader tools</h3>
+        <label>Approve member email <input id="approve_email" placeholder="student@example.edu"></label>
+        <button onclick="approveMember()">Approve</button>
+        <h4>Post announcement</h4>
+        <label>Title <input id="ann_title"></label>
+        <label>Body <textarea id="ann_body"></textarea></label>
+        <button onclick="postAnnouncement()">Publish</button>
+      </div>
+      <div>
+        <h3>Schedule club event</h3>
+        <label>Title <input id="club_event_title" value="Study Session"></label>
+        <label>Starts At <input id="club_event_starts"></label>
+        <label>Location <input id="club_event_location" value="Library 201"></label>
+        <label>Capacity <input type="number" id="club_event_capacity" value="10"></label>
+        <label>Price (cents) <input type="number" id="club_event_price" value="0"></label>
+        <label>Category <input id="club_event_category" value="community"></label>
+        <button onclick="createClubEvent()">Create</button>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Admin dashboard</h2>
+    <button onclick="loadPendingClubs()">Load pending clubs</button>
+    <ul id="pending_club_list"></ul>
+    <label>Approve club ID <input type="number" id="approve_club_id"></label>
+    <button onclick="approveClub()">Approve</button>
+    <pre id="admin_result"></pre>
   </section>
 
 <script>
   const API = "http://localhost:8000/api";
+  let loadedClubId = null;
 
-  function isoPlusDays(d){
-    const t = new Date(Date.now() + d*86400000);
-    t.setSeconds(0,0);
-    return t.toISOString();
+  function isoPlusDays(days){
+    const dt = new Date(Date.now() + days * 86400000);
+    dt.setSeconds(0,0);
+    return dt.toISOString();
   }
-  document.getElementById("starts_at").value = isoPlusDays(2);
+
+  document.getElementById("event_starts").value = isoPlusDays(2);
+  document.getElementById("club_event_starts").value = isoPlusDays(5);
+
+  function setPersona(email, role){
+    document.getElementById("persona_email").value = email;
+    document.getElementById("persona_role").value = role;
+  }
+
+  function buildHeaders(json=true){
+    const headers = {
+      "X-User-Email": document.getElementById("persona_email").value,
+      "X-User-Role": document.getElementById("persona_role").value
+    };
+    if(json){ headers["Content-Type"] = "application/json"; }
+    return headers;
+  }
 
   async function createEvent(){
     const payload = {
-      title: document.getElementById("title").value,
-      starts_at: document.getElementById("starts_at").value,
-      location: document.getElementById("location").value,
-      capacity: Number(document.getElementById("capacity").value),
-      price_cents: Number(document.getElementById("price_cents").value),
-      category: document.getElementById("category").value
+      title: document.getElementById("event_title").value,
+      starts_at: document.getElementById("event_starts").value,
+      location: document.getElementById("event_location").value,
+      capacity: Number(document.getElementById("event_capacity").value),
+      price_cents: Number(document.getElementById("event_price").value),
+      category: document.getElementById("event_category").value,
+      club_id: document.getElementById("event_club").value ? Number(document.getElementById("event_club").value) : null
     };
-    const r = await fetch(`${API}/events`, {
+    const res = await fetch(`${API}/events`, {
       method: "POST",
-      headers: {"Content-Type":"application/json"},
+      headers: buildHeaders(true),
       body: JSON.stringify(payload)
     });
-    document.getElementById("create_out").textContent = JSON.stringify(await r.json(), null, 2);
+    alert(`Create event: ${res.status}`);
+    listEvents();
   }
 
   async function listEvents(){
     const params = new URLSearchParams();
-    const cat = document.getElementById("f_category").value;
-    const free = document.getElementById("f_free").value;
-    if (cat) params.set("category", cat);
-    if (free) params.set("free_only", true);
-    const r = await fetch(`${API}/events?` + params.toString());
-    const data = await r.json();
+    const start = document.getElementById("filter_start").value;
+    const end = document.getElementById("filter_end").value;
+    const category = document.getElementById("filter_category").value;
+    const location = document.getElementById("filter_location").value;
+    const sort = document.getElementById("filter_sort").value;
+    if(start) params.set("start", start);
+    if(end) params.set("end", end);
+    if(category) params.set("category", category);
+    if(location) params.set("location", location);
+    if(document.getElementById("filter_free").checked) params.set("free_only", true);
+    if(sort) params.set("sort", sort);
+    const res = await fetch(`${API}/events?${params.toString()}`);
+    const data = await res.json();
     const tbody = document.getElementById("events_tbody");
     tbody.innerHTML = "";
-    data.forEach(e => {
+    data.forEach(ev => {
       const tr = document.createElement("tr");
-      tr.innerHTML = `<td>${e.id}</td><td>${e.title}</td><td>${new Date(e.starts_at).toLocaleString()}</td>
-                      <td>${e.capacity || "∞"}</td><td>${e.price_cents ? "$"+(e.price_cents/100).toFixed(2) : "Free"}</td><td>${e.category}</td>`;
+      tr.innerHTML = `<td>${ev.id}</td><td>${ev.title}</td><td>${new Date(ev.starts_at).toLocaleString()}</td>` +
+                     `<td>${ev.location}</td><td>${ev.category}</td><td>${ev.club_id ?? '-'}</td>` +
+                     `<td>${ev.capacity || '∞'}</td><td>${ev.registration_count}</td>`;
       tbody.appendChild(tr);
     });
   }
 
-  async function register(){
-    const id = Number(document.getElementById("event_id").value);
-    const r = await fetch(`${API}/registrations`, {
-      method: "POST",
-      headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({ event_id: id })
+  async function loadTrending(){
+    const res = await fetch(`${API}/events/trending`);
+    const data = await res.json();
+    const ul = document.getElementById("trending_list");
+    ul.innerHTML = "";
+    data.forEach(ev => {
+      const li = document.createElement("li");
+      li.textContent = `${ev.title} (${ev.registration_count} regs)`;
+      ul.appendChild(li);
     });
-    const body = await r.json();
-    document.getElementById("reg_out").textContent = JSON.stringify(body, null, 2);
   }
 
-  // initial list
+  async function registerEvent(){
+    const id = Number(document.getElementById("register_event_id").value);
+    const res = await fetch(`${API}/registrations`, {
+      method: "POST",
+      headers: buildHeaders(true),
+      body: JSON.stringify({event_id: id})
+    });
+    alert(`Register: ${res.status}`);
+    listEvents();
+  }
+
+  async function loadClubs(){
+    const res = await fetch(`${API}/clubs`);
+    const data = await res.json();
+    const ul = document.getElementById("club_list");
+    ul.innerHTML = "";
+    data.forEach(club => {
+      const li = document.createElement("li");
+      li.innerHTML = `<strong>${club.name}</strong> — ${club.description}<br>` +
+                     `Members: ${club.member_count} | Upcoming events: ${club.upcoming_event_count}`;
+      ul.appendChild(li);
+    });
+  }
+
+  async function createClub(){
+    const payload = {
+      name: document.getElementById("club_name").value,
+      description: document.getElementById("club_desc").value
+    };
+    const res = await fetch(`${API}/clubs`, {
+      method: "POST",
+      headers: buildHeaders(true),
+      body: JSON.stringify(payload)
+    });
+    document.getElementById("club_create_result").textContent = JSON.stringify(await res.json(), null, 2);
+    loadPendingClubs();
+  }
+
+  async function joinClub(){
+    const id = Number(document.getElementById("join_club_id").value);
+    const res = await fetch(`${API}/clubs/${id}/join`, {
+      method: "POST",
+      headers: buildHeaders(true)
+    });
+    document.getElementById("club_join_result").textContent = JSON.stringify(await res.json(), null, 2);
+  }
+
+  async function loadClubDetail(){
+    const id = Number(document.getElementById("club_detail_id").value);
+    if(!id){ return; }
+    const res = await fetch(`${API}/clubs/${id}`);
+    const data = await res.json();
+    loadedClubId = id;
+    const div = document.getElementById("club_detail");
+    const members = data.members.map(m => `${m.user_email} (${m.role})`).join(', ') || '—';
+    const announcements = data.announcements.map(a => `<li><strong>${a.title}</strong> — ${a.body}</li>`).join('');
+    const events = data.events.map(ev => `<li>${ev.title} (${new Date(ev.starts_at).toLocaleDateString()}) cap ${ev.capacity} regs ${ev.registration_count}</li>`).join('');
+    div.innerHTML = `
+      <h3>${data.club.name} ${data.club.approved ? '' : '(pending)'}</h3>
+      <p>${data.club.description}</p>
+      <p><strong>Members:</strong> ${members}</p>
+      <div>
+        <h4>Announcements</h4>
+        <ul>${announcements || '<li>No announcements</li>'}</ul>
+      </div>
+      <div>
+        <h4>Upcoming events</h4>
+        <ul>${events || '<li>No upcoming events</li>'}</ul>
+      </div>
+    `;
+  }
+
+  async function approveMember(){
+    if(!loadedClubId){ alert('Load a club first'); return; }
+    const email = document.getElementById("approve_email").value;
+    const res = await fetch(`${API}/clubs/${loadedClubId}/members/${encodeURIComponent(email)}/approve`, {
+      method: "POST",
+      headers: buildHeaders(true)
+    });
+    alert(`Approve member: ${res.status}`);
+    loadClubDetail();
+  }
+
+  async function postAnnouncement(){
+    if(!loadedClubId){ alert('Load a club first'); return; }
+    const payload = {
+      title: document.getElementById("ann_title").value,
+      body: document.getElementById("ann_body").value
+    };
+    const res = await fetch(`${API}/clubs/${loadedClubId}/announcements`, {
+      method: "POST",
+      headers: buildHeaders(true),
+      body: JSON.stringify(payload)
+    });
+    alert(`Announcement: ${res.status}`);
+    loadClubDetail();
+  }
+
+  async function createClubEvent(){
+    if(!loadedClubId){ alert('Load a club first'); return; }
+    const payload = {
+      title: document.getElementById("club_event_title").value,
+      starts_at: document.getElementById("club_event_starts").value,
+      location: document.getElementById("club_event_location").value,
+      capacity: Number(document.getElementById("club_event_capacity").value),
+      price_cents: Number(document.getElementById("club_event_price").value),
+      category: document.getElementById("club_event_category").value
+    };
+    const res = await fetch(`${API}/clubs/${loadedClubId}/events`, {
+      method: "POST",
+      headers: buildHeaders(true),
+      body: JSON.stringify(payload)
+    });
+    alert(`Club event: ${res.status}`);
+    loadClubDetail();
+  }
+
+  async function loadPendingClubs(){
+    const res = await fetch(`${API}/admin/clubs/pending`, { headers: buildHeaders(false) });
+    if(res.status === 403){
+      document.getElementById("pending_club_list").innerHTML = '<li>Admin role required</li>';
+      return;
+    }
+    const data = await res.json();
+    const ul = document.getElementById("pending_club_list");
+    ul.innerHTML = "";
+    data.forEach(club => {
+      const li = document.createElement("li");
+      li.textContent = `${club.id} — ${club.name} (${club.member_count} approved members)`;
+      ul.appendChild(li);
+    });
+  }
+
+  async function approveClub(){
+    const id = Number(document.getElementById("approve_club_id").value);
+    const res = await fetch(`${API}/admin/clubs/${id}/approve`, {
+      method: "POST",
+      headers: buildHeaders(false)
+    });
+    document.getElementById("admin_result").textContent = JSON.stringify(await res.json(), null, 2);
+    loadClubs();
+    loadPendingClubs();
+  }
+
+  // initial data
   listEvents();
+  loadTrending();
+  loadClubs();
+  loadClubDetail();
 </script>
 </body>
 </html>
