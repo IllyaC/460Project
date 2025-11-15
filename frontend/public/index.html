@@ -1,0 +1,112 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Campus Clubs & Events — Demo (SQLite)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;margin:24px;max-width:900px}
+    section{border:1px solid #ddd;border-radius:8px;padding:16px;margin-bottom:16px}
+    label{display:block;margin-top:8px} input,select,button{font:inherit}
+    input,select{padding:8px;width:100%;max-width:420px} button{padding:8px 12px;margin-top:10px}
+    pre{background:#0b1020;color:#e6edf3;padding:12px;border-radius:10px;overflow:auto;max-height:240px}
+    table{width:100%;border-collapse:collapse} th,td{padding:8px;border-bottom:1px solid #eee;text-align:left}
+  </style>
+</head>
+<body>
+  <h1>Campus Clubs & Events — Local Demo (SQLite)</h1>
+  <p>Backend: <code>http://localhost:8000</code> | Frontend: <code>http://localhost:3000</code></p>
+
+  <section>
+    <h2>1) Create Event</h2>
+    <label>Title <input id="title" value="Hack Night"></label>
+    <label>Starts At (ISO) <input id="starts_at"></label>
+    <label>Location <input id="location" value="Student Union"></label>
+    <label>Capacity <input id="capacity" type="number" value="2"></label>
+    <label>Price (cents) <input id="price_cents" type="number" value="0"></label>
+    <label>Category <input id="category" value="tech"></label>
+    <button onclick="createEvent()">Create</button>
+    <pre id="create_out"></pre>
+  </section>
+
+  <section>
+    <h2>2) List / Search Events</h2>
+    <label>Category <input id="f_category" placeholder="e.g. tech"></label>
+    <label>Free only
+      <select id="f_free"><option value="">(any)</option><option value="true">true</option></select>
+    </label>
+    <button onclick="listEvents()">List</button>
+    <table>
+      <thead><tr><th>ID</th><th>Title</th><th>When</th><th>Cap</th><th>Price</th><th>Category</th></tr></thead>
+      <tbody id="events_tbody"></tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>3) Register</h2>
+    <label>Event ID <input id="event_id" type="number" value="1"></label>
+    <button onclick="register()">Register</button>
+    <pre id="reg_out"></pre>
+  </section>
+
+<script>
+  const API = "http://localhost:8000/api";
+
+  function isoPlusDays(d){
+    const t = new Date(Date.now() + d*86400000);
+    t.setSeconds(0,0);
+    return t.toISOString();
+  }
+  document.getElementById("starts_at").value = isoPlusDays(2);
+
+  async function createEvent(){
+    const payload = {
+      title: document.getElementById("title").value,
+      starts_at: document.getElementById("starts_at").value,
+      location: document.getElementById("location").value,
+      capacity: Number(document.getElementById("capacity").value),
+      price_cents: Number(document.getElementById("price_cents").value),
+      category: document.getElementById("category").value
+    };
+    const r = await fetch(`${API}/events`, {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify(payload)
+    });
+    document.getElementById("create_out").textContent = JSON.stringify(await r.json(), null, 2);
+  }
+
+  async function listEvents(){
+    const params = new URLSearchParams();
+    const cat = document.getElementById("f_category").value;
+    const free = document.getElementById("f_free").value;
+    if (cat) params.set("category", cat);
+    if (free) params.set("free_only", true);
+    const r = await fetch(`${API}/events?` + params.toString());
+    const data = await r.json();
+    const tbody = document.getElementById("events_tbody");
+    tbody.innerHTML = "";
+    data.forEach(e => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${e.id}</td><td>${e.title}</td><td>${new Date(e.starts_at).toLocaleString()}</td>
+                      <td>${e.capacity || "∞"}</td><td>${e.price_cents ? "$"+(e.price_cents/100).toFixed(2) : "Free"}</td><td>${e.category}</td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  async function register(){
+    const id = Number(document.getElementById("event_id").value);
+    const r = await fetch(`${API}/registrations`, {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ event_id: id })
+    });
+    const body = await r.json();
+    document.getElementById("reg_out").textContent = JSON.stringify(body, null, 2);
+  }
+
+  // initial list
+  listEvents();
+</script>
+</body>
+</html>
