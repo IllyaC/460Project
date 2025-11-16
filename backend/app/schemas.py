@@ -40,6 +40,7 @@ class ClubSummary(BaseModel):
     name: str
     description: str
     approved: bool
+    created_by_email: str
     member_count: int
     upcoming_event_count: int
 
