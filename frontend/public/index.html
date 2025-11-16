@@ -122,6 +122,26 @@
     #app_main[hidden] { display: none; }
     #landing[hidden] { display: none; }
     .stack { display: flex; flex-direction: column; gap: 16px; }
+    .dashboard {
+      margin-top: 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .dashboard-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 6px;
+    }
+    .dashboard-header h2 {
+      margin: 0;
+      font-size: 1.3rem;
+    }
+    .dashboard-header p {
+      margin: 4px 0 0;
+      color: #475569;
+    }
     .quick-actions { display: flex; gap: 12px; flex-wrap: wrap; }
     .subtle { color: #475569; font-size: 0.85rem; margin-top: 6px; display: block; }
     .login-hint { font-size: 0.85rem; color: #475569; margin-top: 8px; }
@@ -205,131 +225,155 @@
         <small class="subtle">These values are sent as <code>X-User-Email</code> and <code>X-User-Role</code> headers.</small>
       </section>
 
-      <section class="card stack" data-for="student,leader">
-        <div class="section-title">
-          <h2>Discover events</h2>
-          <div class="quick-actions">
-            <button type="button" onclick="listEvents()">Refresh list</button>
-            <button type="button" class="secondary" onclick="loadTrending()">See trending</button>
+      <section class="dashboard" data-role="student">
+        <div class="dashboard-header">
+          <div>
+            <h2>Student dashboard</h2>
+            <p>Discover events, follow trending activities, and request to join clubs.</p>
           </div>
         </div>
-        <div class="panel-grid">
-          <div>
-            <label><span>Starts after</span><input id="filter_start" placeholder="2024-09-01T00:00:00Z"></label>
-            <label><span>Ends before</span><input id="filter_end" placeholder="2024-09-30T23:59:59Z"></label>
-            <label><span>Category</span><input id="filter_category" placeholder="tech"></label>
-            <label><span>Location contains</span><input id="filter_location" placeholder="ENG"></label>
-            <label><span>Sort</span>
-              <select id="filter_sort">
-                <option value="date">date</option>
-                <option value="popularity">popularity</option>
-              </select>
-            </label>
-            <label><input type="checkbox" id="filter_free"> Free only</label>
-            <button type="button" onclick="listEvents()">Run search</button>
-          </div>
-          <div>
-            <h3>Create event</h3>
-            <label><span>Title</span><input id="event_title" value="Hack Night"></label>
-            <label><span>Starts at</span><input id="event_starts"></label>
-            <label><span>Location</span><input id="event_location" value="Student Union"></label>
-            <label><span>Capacity</span><input type="number" id="event_capacity" value="5"></label>
-            <label><span>Price (cents)</span><input type="number" id="event_price" value="0"></label>
-            <label><span>Category</span><input id="event_category" value="tech"></label>
-            <label><span>Club ID (optional)</span><input type="number" id="event_club"></label>
+
+        <section class="card stack" data-for="student">
+          <div class="section-title">
+            <h2>Discover events</h2>
             <div class="quick-actions">
-              <button type="button" onclick="createEvent()">Create event</button>
-              <button type="button" class="secondary" onclick="registerEvent()">Register for ID below</button>
+              <button type="button" onclick="listEvents()">Refresh list</button>
+              <button type="button" class="secondary" onclick="loadTrending()">See trending</button>
             </div>
-            <label><span>Event ID to register</span><input type="number" id="register_event_id" value="1"></label>
           </div>
-        </div>
-        <div class="panel-grid">
-          <div style="grid-column: 1 / -1;">
-            <table>
-              <thead>
-                <tr><th>ID</th><th>Title</th><th>When</th><th>Location</th><th>Category</th><th>Club</th><th>Capacity</th><th>Registered</th></tr>
-              </thead>
-              <tbody id="events_tbody"></tbody>
-            </table>
+          <div class="panel-grid">
+            <div>
+              <label><span>Starts after</span><input id="filter_start" placeholder="2024-09-01T00:00:00Z"></label>
+              <label><span>Ends before</span><input id="filter_end" placeholder="2024-09-30T23:59:59Z"></label>
+              <label><span>Category</span><input id="filter_category" placeholder="tech"></label>
+              <label><span>Location contains</span><input id="filter_location" placeholder="ENG"></label>
+              <label><span>Sort</span>
+                <select id="filter_sort">
+                  <option value="date">date</option>
+                  <option value="popularity">popularity</option>
+                </select>
+              </label>
+              <label><input type="checkbox" id="filter_free"> Free only</label>
+              <button type="button" onclick="listEvents()">Run search</button>
+            </div>
+            <div>
+              <h3>Create event</h3>
+              <label><span>Title</span><input id="event_title" value="Hack Night"></label>
+              <label><span>Starts at</span><input id="event_starts"></label>
+              <label><span>Location</span><input id="event_location" value="Student Union"></label>
+              <label><span>Capacity</span><input type="number" id="event_capacity" value="5"></label>
+              <label><span>Price (cents)</span><input type="number" id="event_price" value="0"></label>
+              <label><span>Category</span><input id="event_category" value="tech"></label>
+              <label><span>Club ID (optional)</span><input type="number" id="event_club"></label>
+              <div class="quick-actions">
+                <button type="button" onclick="createEvent()">Create event</button>
+                <button type="button" class="secondary" onclick="registerEvent()">Register for ID below</button>
+              </div>
+              <label><span>Event ID to register</span><input type="number" id="register_event_id" value="1"></label>
+            </div>
           </div>
-          <div>
-            <h3>Trending now</h3>
-            <ul id="trending_list"></ul>
+          <div class="panel-grid">
+            <div style="grid-column: 1 / -1;">
+              <table>
+                <thead>
+                  <tr><th>ID</th><th>Title</th><th>When</th><th>Location</th><th>Category</th><th>Club</th><th>Capacity</th><th>Registered</th></tr>
+                </thead>
+                <tbody id="events_tbody"></tbody>
+              </table>
+            </div>
+            <div>
+              <h3>Trending now</h3>
+              <ul id="trending_list"></ul>
+            </div>
           </div>
-        </div>
+        </section>
+
+        <section class="card stack" data-for="student">
+          <div class="section-title">
+            <h2>Clubs directory</h2>
+            <button type="button" onclick="loadClubs()">Refresh clubs</button>
+          </div>
+          <div class="panel-grid">
+            <div>
+              <ul id="club_list"></ul>
+            </div>
+            <div>
+              <h3>Create a club</h3>
+              <label><span>Name</span><input id="club_name" placeholder="Board Games"></label>
+              <label><span>Description</span><textarea id="club_desc" placeholder="What does this club do?"></textarea></label>
+              <button type="button" onclick="createClub()">Submit for approval</button>
+              <pre id="club_create_result"></pre>
+              <h3>Join a club</h3>
+              <label><span>Club ID</span><input type="number" id="join_club_id"></label>
+              <button type="button" onclick="joinClub()">Request to join</button>
+              <pre id="club_join_result"></pre>
+            </div>
+          </div>
+        </section>
       </section>
 
-      <section class="card stack" data-for="student,leader">
-        <div class="section-title">
-          <h2>Clubs directory</h2>
-          <button type="button" onclick="loadClubs()">Refresh clubs</button>
-        </div>
-        <div class="panel-grid">
+      <section class="dashboard" data-role="leader">
+        <div class="dashboard-header">
           <div>
-            <ul id="club_list"></ul>
-          </div>
-          <div>
-            <h3>Create a club</h3>
-            <label><span>Name</span><input id="club_name" placeholder="Board Games"></label>
-            <label><span>Description</span><textarea id="club_desc" placeholder="What does this club do?"></textarea></label>
-            <button type="button" onclick="createClub()">Submit for approval</button>
-            <pre id="club_create_result"></pre>
-            <h3>Join a club</h3>
-            <label><span>Club ID</span><input type="number" id="join_club_id"></label>
-            <button type="button" onclick="joinClub()">Request to join</button>
-            <pre id="club_join_result"></pre>
+            <h2>Leader dashboard</h2>
+            <p>Manage the clubs you run: approve members, post announcements, and schedule meetups.</p>
           </div>
         </div>
+        <section class="card stack" data-for="leader">
+          <div class="section-title">
+            <h2>Your club tools</h2>
+            <button type="button" onclick="loadClubDetail()">Reload club</button>
+          </div>
+          <div class="panel-grid">
+            <div>
+              <label><span>Club ID</span><input type="number" id="club_detail_id" value="1"></label>
+              <button type="button" onclick="loadClubDetail()">Load club</button>
+              <div id="club_detail"></div>
+            </div>
+            <div>
+              <h3>Approve & announce</h3>
+              <label><span>Approve member email</span><input id="approve_email" placeholder="student@example.edu"></label>
+              <button type="button" onclick="approveMember()">Approve member</button>
+              <label><span>Announcement title</span><input id="ann_title"></label>
+              <label><span>Announcement body</span><textarea id="ann_body"></textarea></label>
+              <button type="button" onclick="postAnnouncement()">Publish update</button>
+            </div>
+            <div>
+              <h3>Schedule club event</h3>
+              <label><span>Title</span><input id="club_event_title" value="Study Session"></label>
+              <label><span>Starts at</span><input id="club_event_starts"></label>
+              <label><span>Location</span><input id="club_event_location" value="Library 201"></label>
+              <label><span>Capacity</span><input type="number" id="club_event_capacity" value="10"></label>
+              <label><span>Price (cents)</span><input type="number" id="club_event_price" value="0"></label>
+              <label><span>Category</span><input id="club_event_category" value="community"></label>
+              <button type="button" onclick="createClubEvent()">Create event</button>
+            </div>
+          </div>
+        </section>
       </section>
 
-      <section class="card stack" data-for="leader">
-        <div class="section-title">
-          <h2>Your club tools</h2>
-          <button type="button" onclick="loadClubDetail()">Reload club</button>
-        </div>
-        <div class="panel-grid">
+      <section class="dashboard" data-role="admin">
+        <div class="dashboard-header">
           <div>
-            <label><span>Club ID</span><input type="number" id="club_detail_id" value="1"></label>
-            <button type="button" onclick="loadClubDetail()">Load club</button>
-            <div id="club_detail"></div>
+            <h2>Admin dashboard</h2>
+            <p>Review pending clubs, approve submissions, and keep the directory clean.</p>
           </div>
-          <div>
-            <h3>Approve & announce</h3>
-            <label><span>Approve member email</span><input id="approve_email" placeholder="student@example.edu"></label>
-            <button type="button" onclick="approveMember()">Approve member</button>
-            <label><span>Announcement title</span><input id="ann_title"></label>
-            <label><span>Announcement body</span><textarea id="ann_body"></textarea></label>
-            <button type="button" onclick="postAnnouncement()">Publish update</button>
-          </div>
-          <div>
-            <h3>Schedule club event</h3>
-            <label><span>Title</span><input id="club_event_title" value="Study Session"></label>
-            <label><span>Starts at</span><input id="club_event_starts"></label>
-            <label><span>Location</span><input id="club_event_location" value="Library 201"></label>
-            <label><span>Capacity</span><input type="number" id="club_event_capacity" value="10"></label>
-            <label><span>Price (cents)</span><input type="number" id="club_event_price" value="0"></label>
-            <label><span>Category</span><input id="club_event_category" value="community"></label>
-            <button type="button" onclick="createClubEvent()">Create event</button>
+          <div class="quick-actions">
+            <button type="button" onclick="loadPendingClubs()">Load pending clubs</button>
           </div>
         </div>
-      </section>
-
-      <section class="card stack" data-for="admin">
-        <div class="section-title">
-          <h2>Admin dashboard</h2>
-          <button type="button" onclick="loadPendingClubs()">Load pending clubs</button>
-        </div>
-        <div class="panel-grid">
-          <div>
-            <ul id="pending_club_list"></ul>
+        <section class="card stack" data-for="admin">
+          <div class="panel-grid">
+            <div>
+              <ul id="pending_club_list"></ul>
+            </div>
+            <div>
+              <label><span>Approve club ID</span><input type="number" id="approve_club_id"></label>
+              <button type="button" onclick="approveClub()">Approve selected</button>
+              <pre id="admin_result"></pre>
+            </div>
           </div>
-          <div>
-            <label><span>Approve club ID</span><input type="number" id="approve_club_id"></label>
-            <button type="button" onclick="approveClub()">Approve selected</button>
-            <pre id="admin_result"></pre>
-          </div>
-        </div>
+        </section>
       </section>
     </main>
   </div>
@@ -463,6 +507,10 @@
     document.querySelectorAll('[data-for]').forEach(section => {
       const roles = section.dataset.for.split(',').map(r => r.trim());
       section.hidden = !(roles.includes(role) || roles.includes("all"));
+    });
+    document.querySelectorAll('[data-role]').forEach(section => {
+      const roles = section.dataset.role.split(',').map(r => r.trim());
+      section.hidden = !roles.includes(role);
     });
   }
 
