@@ -177,6 +177,11 @@ def ensure_admin(user: UserContext) -> None:
         raise HTTPException(status_code=403, detail="Admin access required")
 
 
+def ensure_leader_role(user: UserContext) -> None:
+    if user.role not in {"leader", "admin"}:
+        raise HTTPException(status_code=403, detail="Leader access required")
+
+
 @app.post("/api/events", response_model=EventOut)
 def create_event(
     payload: EventCreate,
@@ -204,8 +209,8 @@ def list_events(
     db: Session = Depends(get_db),
 ):
     stmt, reg_count = base_event_query()
-    if start:
-        stmt = stmt.where(Event.starts_at >= start)
+    effective_start = start or datetime.utcnow()
+    stmt = stmt.where(Event.starts_at >= effective_start)
     if end:
         stmt = stmt.where(Event.starts_at <= end)
     if category:
@@ -227,7 +232,11 @@ def list_events(
 @app.get("/api/events/trending", response_model=list[EventOut])
 def trending_events(limit: int = 5, db: Session = Depends(get_db)):
     stmt, reg_count = base_event_query()
-    stmt = stmt.order_by(reg_count.desc(), Event.starts_at.asc()).limit(limit)
+    stmt = (
+        stmt.where(Event.starts_at >= datetime.utcnow())
+        .order_by(reg_count.desc(), Event.starts_at.asc())
+        .limit(limit)
+    )
     rows = db.execute(stmt).all()
     return [serialize_event(event, regs) for event, regs in rows]
 
@@ -277,6 +286,7 @@ def create_club(
     db: Session = Depends(get_db),
     user: UserContext = Depends(get_user),
 ):
+    ensure_leader_role(user)
     club = Club(
         name=payload.name,
         description=payload.description,
@@ -320,6 +330,7 @@ def club_summary(db: Session, club: Club) -> ClubSummary:
         name=club.name,
         description=club.description,
         approved=club.approved,
+        created_by_email=club.created_by_email,
         member_count=member_count,
         upcoming_event_count=upcoming_events,
     )
@@ -327,11 +338,7 @@ def club_summary(db: Session, club: Club) -> ClubSummary:
 
 @app.get("/api/clubs", response_model=list[ClubSummary])
 def list_clubs(db: Session = Depends(get_db)):
-    clubs = (
-        db.execute(select(Club).where(Club.approved == True).order_by(Club.name.asc()))  # noqa: E712
-        .scalars()
-        .all()
-    )
+    clubs = db.execute(select(Club).order_by(Club.name.asc())).scalars().all()
     return [club_summary(db, club) for club in clubs]
 
 
@@ -342,12 +349,7 @@ def get_club(club_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Club not found")
     summary = club_summary(db, club)
     members = (
-        db.execute(
-            select(ClubMember).where(
-                ClubMember.club_id == club.id,
-                ClubMember.status == "approved",
-            )
-        )
+        db.execute(select(ClubMember).where(ClubMember.club_id == club.id))
         .scalars()
         .all()
     )
@@ -516,6 +518,16 @@ def approve_club(
             ClubMember.role == "leader",
         )
     ).scalars().all()
-    for member in session_members:
-        member.status = "approved"
+    if session_members:
+        for member in session_members:
+            member.status = "approved"
+    else:
+        db.add(
+            ClubMember(
+                club_id=club_id,
+                user_email=club.created_by_email,
+                role="leader",
+                status="approved",
+            )
+        )
     return club_summary(db, club)
