@@ -39,7 +39,7 @@
     }
     .persona-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
       gap: 20px;
       margin-top: 32px;
     }
@@ -124,6 +124,11 @@
     .stack { display: flex; flex-direction: column; gap: 16px; }
     .quick-actions { display: flex; gap: 12px; flex-wrap: wrap; }
     .subtle { color: #475569; font-size: 0.85rem; margin-top: 6px; display: block; }
+    .login-hint { font-size: 0.85rem; color: #475569; margin-top: 8px; }
+    .credential-list { list-style: none; padding-left: 0; font-size: 0.9rem; }
+    .credential-list li { margin-bottom: 6px; }
+    .credential-list code { background: rgba(15,23,42,0.08); padding: 2px 6px; border-radius: 6px; }
+    .error { color: #dc2626; font-weight: 600; margin-top: 6px; }
     @media (max-width: 640px) {
       .section-title { flex-direction: column; align-items: flex-start; gap: 10px; }
       button { width: 100%; }
@@ -139,23 +144,36 @@
     </header>
 
     <section id="landing" class="persona-grid">
+      <article class="card" style="grid-column: 1 / -1;">
+        <p class="pill">Demo login</p>
+        <h3>Authenticate to continue</h3>
+        <p>Use the credentials below to simulate each persona. The portal stays hidden until a valid login occurs.</p>
+        <form id="login_form" onsubmit="handleLogin(event)" class="stack">
+          <label><span>Email</span><input id="login_email" autocomplete="username"></label>
+          <label><span>Password</span><input id="login_password" type="password" autocomplete="current-password"></label>
+          <button type="submit">Sign in</button>
+          <p id="login_error" class="error" aria-live="polite"></p>
+        </form>
+        <p class="login-hint">Available demo users (<code>email</code> / <code>password</code>):</p>
+        <ul id="credential_list" class="credential-list"></ul>
+      </article>
       <article class="card">
         <p class="pill">Student</p>
         <h3>Discover events & clubs</h3>
         <p>Browse trending events, register instantly, and find clubs to join that match your interests.</p>
-        <button onclick="enterDashboard('student')">Enter student dashboard</button>
+        <button type="button" onclick="fillLogin('student')">Fill with student login</button>
       </article>
       <article class="card">
         <p class="pill">Club Leader</p>
         <h3>Manage your community</h3>
         <p>Approve new members, publish announcements, and schedule club-hosted meetups.</p>
-        <button onclick="enterDashboard('leader')">Enter leader dashboard</button>
+        <button type="button" onclick="fillLogin('leader')">Fill with leader login</button>
       </article>
       <article class="card">
         <p class="pill">Admin</p>
         <h3>Review pending clubs</h3>
         <p>Quickly approve submissions, monitor participation, and keep the campus directory curated.</p>
-        <button onclick="enterDashboard('admin')">Enter admin workspace</button>
+        <button type="button" onclick="fillLogin('admin')">Fill with admin login</button>
       </article>
     </section>
 
@@ -167,18 +185,16 @@
             <small class="subtle">Update the persona headers to test different permissions.</small>
           </div>
           <div class="quick-actions">
-            <button class="secondary" type="button" onclick="changePersona()">← Change persona</button>
-            <button type="button" onclick="setPersona('leader@school.edu','leader')">Leader quick-fill</button>
-            <button type="button" onclick="setPersona('admin@school.edu','admin')">Admin quick-fill</button>
+            <button class="secondary" type="button" onclick="logout()">← Log out</button>
           </div>
         </div>
         <div class="panel-grid">
           <div>
-            <label><span>Email address</span><input id="persona_email" value="student@example.edu"></label>
+            <label><span>Email address</span><input id="persona_email" value="" readonly></label>
           </div>
           <div>
             <label><span>Role</span>
-              <select id="persona_role">
+              <select id="persona_role" disabled>
                 <option value="student">student</option>
                 <option value="leader">leader</option>
                 <option value="admin">admin</option>
@@ -321,6 +337,9 @@
 <script>
   const API = "http://localhost:8000/api";
   let loadedClubId = null;
+  let credentialStore = new Map();
+  let demoUsers = [];
+  let activeUser = null;
 
   function isoPlusDays(days){
     const dt = new Date(Date.now() + days * 86400000);
@@ -331,12 +350,92 @@
   document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("event_starts").value = isoPlusDays(2);
     document.getElementById("club_event_starts").value = isoPlusDays(5);
+    loadDemoCredentials();
   });
 
   function setPersona(email, role){
     document.getElementById("persona_email").value = email;
     document.getElementById("persona_role").value = role;
     updateRoleSections(role);
+  }
+
+  async function loadDemoCredentials(){
+    try {
+      const res = await fetch("demo-credentials.txt");
+      const text = await res.text();
+      credentialStore = new Map();
+      demoUsers = [];
+      text.split(/\r?\n/).forEach(line => {
+        const trimmed = line.trim();
+        if(!trimmed || trimmed.startsWith("#")) return;
+        const [email, role, password] = trimmed.split(",").map(v => v.trim());
+        if(email && role && password){
+          const record = { email, role, password };
+          credentialStore.set(email.toLowerCase(), record);
+          demoUsers.push(record);
+        }
+      });
+      renderCredentialList();
+    } catch(err){
+      document.getElementById("credential_list").innerHTML = '<li>Unable to load demo credentials</li>';
+    }
+  }
+
+  function renderCredentialList(){
+    const list = document.getElementById("credential_list");
+    list.innerHTML = "";
+    demoUsers.forEach(user => {
+      const li = document.createElement("li");
+      li.innerHTML = `<strong>${user.role}</strong>: <code>${user.email}</code> / <code>${user.password}</code>`;
+      list.appendChild(li);
+    });
+    const defaultStudent = demoUsers.find(user => user.role === "student");
+    if(defaultStudent){
+      document.getElementById("login_email").value = defaultStudent.email;
+      document.getElementById("login_password").value = defaultStudent.password;
+    }
+  }
+
+  function handleLogin(event){
+    event.preventDefault();
+    const email = document.getElementById("login_email").value.trim();
+    const password = document.getElementById("login_password").value.trim();
+    const record = credentialStore.get(email.toLowerCase());
+    const errorEl = document.getElementById("login_error");
+    if(!record || record.password !== password){
+      errorEl.textContent = "Invalid email or password";
+      return;
+    }
+    errorEl.textContent = "";
+    completeLogin(record);
+  }
+
+  function completeLogin(user){
+    activeUser = user;
+    setPersona(user.email, user.role);
+    document.getElementById("landing").hidden = true;
+    document.getElementById("app_main").hidden = false;
+    document.getElementById("login_password").value = "";
+    loadInitialData();
+  }
+
+  function loadInitialData(){
+    listEvents();
+    loadTrending();
+    loadClubs();
+    loadClubDetail();
+    if(activeUser?.role === "admin"){
+      loadPendingClubs();
+    } else {
+      document.getElementById("pending_club_list").innerHTML = "";
+    }
+  }
+
+  function fillLogin(role){
+    const user = demoUsers.find(u => u.role === role);
+    if(!user){ return; }
+    document.getElementById("login_email").value = user.email;
+    document.getElementById("login_password").value = user.password;
   }
 
   function buildHeaders(json=true){
@@ -348,20 +447,15 @@
     return headers;
   }
 
-  function enterDashboard(role){
-    const defaults = {
-      student: "student@example.edu",
-      leader: "leader@school.edu",
-      admin: "admin@school.edu"
-    };
-    setPersona(defaults[role], role);
-    document.getElementById("landing").hidden = true;
-    document.getElementById("app_main").hidden = false;
-  }
-
-  function changePersona(){
+  function logout(){
+    activeUser = null;
+    loadedClubId = null;
     document.getElementById("app_main").hidden = true;
     document.getElementById("landing").hidden = false;
+    document.getElementById("persona_email").value = "";
+    document.getElementById("persona_role").value = "student";
+    document.getElementById("pending_club_list").innerHTML = "";
+    document.getElementById("admin_result").textContent = "";
   }
 
   function updateRoleSections(role){
@@ -579,11 +673,7 @@
     loadPendingClubs();
   }
 
-  // initial data
-  listEvents();
-  loadTrending();
-  loadClubs();
-  loadClubDetail();
+  // initial data loads once a persona logs in via handleLogin()
 </script>
 </body>
 </html>

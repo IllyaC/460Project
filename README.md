@@ -28,6 +28,21 @@ Every API call reads `X-User-Email` (default `student@example.edu`) and `X-User-
 | AI Club Leader | `leader@school.edu` | `leader` | Approve members, post announcements, schedule leader-only events |
 | Admin | `admin@school.edu` | `admin` | Approve pending clubs via the admin dashboard |
 
+### Demo login credentials
+The Express frontend now hides the dashboard behind a simple credential check that reads from `frontend/public/demo-credentials.txt`. The file ships with 5 students plus one leader and one admin so that every persona can be tested quickly:
+
+| Email | Role | Password | Notes |
+|-------|------|----------|-------|
+| `amy.student@demo.edu` | student | `otter123` | General-purpose student #1 |
+| `ben.student@demo.edu` | student | `summit234` | General-purpose student #2 |
+| `cory.student@demo.edu` | student | `harbor345` | General-purpose student #3 |
+| `dana.student@demo.edu` | student | `lumen456` | General-purpose student #4 |
+| `eli.student@demo.edu` | student | `orbit567` | General-purpose student #5 |
+| `leader@school.edu` | leader | `clubguide` | Pre-seeded AI Club leader |
+| `admin@school.edu` | admin | `supervisor` | Campus admin reviewer |
+
+To update or add credentials for future demos, edit the text file (format: `email,role,password`) and refresh the browser — the login form and quick-fill buttons repopulate automatically.
+
 ## API highlights
 Key tables: `clubs`, `club_members`, `club_announcements`, `events`, and `registrations`. On startup the backend auto-creates tables and seeds:
 - Approved **AI Club** with a leader (`leader@school.edu`), an announcement, and a capacity-2 workshop.
@@ -90,8 +105,20 @@ The single-page frontend (served by Express) now includes:
 - [x] Frontend demonstrates end-to-end flows (create→filter→register, join→approve, announce, leader events, admin approval).
 
 ## Verifying flows
-1. Start backend + frontend (see Quick start), then open http://localhost:3000.
-2. As a **student**, create an event, filter events, and register twice (third attempt hits the 409 capacity guard).
-3. As a **student**, request to join the AI Club, then switch to the **leader** persona to approve that email, post an announcement, and add a club event.
-4. Switch to **admin** and approve "Music Makers" from the Admin dashboard (its leader membership unlocks automatically).
-5. Check the Discover + Trending section to see registration counts update in realtime.
+Use this manual test to cover the login, student, leader, and admin experiences end-to-end:
+
+1. **Launch the stack** (backend + frontend) and open http://localhost:3000.
+2. **Log in as a student** using `amy.student@demo.edu` / `otter123`. Confirm the dashboard becomes visible and the header shows the Student persona.
+3. **Event discovery & registration**
+   - Run a search in "Discover events" and confirm the table populates.
+   - Use "Create event" to add a new Hack Night; then register for it twice. A third registration attempt should return a 409 once the capacity is hit.
+4. **Club interactions**
+   - From the "Clubs directory", request to join the AI Club (ID 1).
+   - Create a brand-new club submission so it appears in the pending queue later.
+5. **Log out** (button in the persona card) and **log in as the leader** using `leader@school.edu` / `clubguide`.
+   - Load Club 1, approve `amy.student@demo.edu`, post an announcement, and schedule a new club-specific event.
+6. **Log out** and **log in as the admin** using `admin@school.edu` / `supervisor`.
+   - Load the pending club list and approve the club that the student just submitted.
+7. **Return to any student account** (e.g., `ben.student@demo.edu`) and refresh Discover + Trending to confirm that registration counts, club memberships, and admin-approved clubs are all reflected.
+
+This sequence exercises the login gate, student-facing flows (discover, register, join), leader tools (approve, announce, schedule), and admin approvals without touching any credentials outside the demo text file.
