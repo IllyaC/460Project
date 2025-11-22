@@ -68,3 +68,19 @@ class ClubDetail(BaseModel):
     members: list[ClubMemberOut]
     announcements: list[AnnouncementOut]
     events: list[EventOut]
+
+
+class FlagCreate(BaseModel):
+    item_type: str
+    item_id: int
+    reason: str
+
+
+class FlagOut(BaseModel):
+    id: int
+    item_type: str
+    item_id: int
+    reason: str
+    user_email: str
+    created_at: datetime
+    resolved: bool
