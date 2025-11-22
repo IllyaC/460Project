@@ -274,3 +274,39 @@ def test_join_club_and_approval_flow(client):
             )
         ).scalar_one()
         assert membership.status == "approved"
+
+
+def test_flag_creation_listing_and_resolution(client):
+    with TestingSessionLocal() as session:
+        event = session.execute(select(models.Event)).scalars().first()
+        assert event is not None
+        event_id = event.id
+
+    student_headers = auth_headers("flagger@school.edu", "student")
+    create_resp = client.post(
+        "/api/flags",
+        json={"item_type": "event", "item_id": event_id, "reason": "Inappropriate content"},
+        headers=student_headers,
+    )
+    assert create_resp.status_code == 200
+    created_flag = create_resp.json()
+    assert created_flag["user_email"] == "flagger@school.edu"
+    assert created_flag["resolved"] is False
+
+    admin_headers = auth_headers("admin@school.edu", "admin")
+    list_resp = client.get("/api/admin/flags", headers=admin_headers)
+    assert list_resp.status_code == 200
+    flags = list_resp.json()
+    assert any(f["id"] == created_flag["id"] for f in flags)
+
+    resolve_resp = client.post(
+        f"/api/admin/flags/{created_flag['id']}/resolve",
+        headers=admin_headers,
+    )
+    assert resolve_resp.status_code == 200
+    resolved_flag = resolve_resp.json()
+    assert resolved_flag["resolved"] is True
+
+    list_after = client.get("/api/admin/flags", headers=admin_headers)
+    assert list_after.status_code == 200
+    assert all(f["id"] != created_flag["id"] for f in list_after.json())

@@ -14,6 +14,7 @@ from .models import (
     ClubAnnouncement,
     ClubMember,
     Event,
+    Flag,
     Registration,
 )
 from .schemas import (
@@ -25,6 +26,8 @@ from .schemas import (
     ClubSummary,
     EventCreate,
     EventOut,
+    FlagCreate,
+    FlagOut,
     RegistrationCreate,
 )
 
@@ -180,6 +183,18 @@ def ensure_admin(user: UserContext) -> None:
 def ensure_leader_role(user: UserContext) -> None:
     if user.role not in {"leader", "admin"}:
         raise HTTPException(status_code=403, detail="Leader access required")
+
+
+def serialize_flag(flag: Flag) -> FlagOut:
+    return FlagOut(
+        id=flag.id,
+        item_type=flag.item_type,
+        item_id=flag.item_id,
+        reason=flag.reason,
+        user_email=flag.user_email,
+        created_at=flag.created_at,
+        resolved=flag.resolved,
+    )
 
 
 @app.post("/api/events", response_model=EventOut)
@@ -483,6 +498,61 @@ def create_club_event(
     db.flush()
     db.refresh(event)
     return serialize_event(event, registrations=0)
+
+
+@app.post("/api/flags", response_model=FlagOut)
+def create_flag(
+    payload: FlagCreate,
+    db: Session = Depends(get_db),
+    user: UserContext = Depends(get_user),
+):
+    item_type = payload.item_type.lower()
+    if item_type not in {"event", "announcement"}:
+        raise HTTPException(status_code=400, detail="item_type must be event or announcement")
+    flag = Flag(
+        item_type=item_type,
+        item_id=payload.item_id,
+        reason=payload.reason,
+        user_email=user.email,
+    )
+    db.add(flag)
+    db.flush()
+    db.refresh(flag)
+    return serialize_flag(flag)
+
+
+@app.get("/api/admin/flags", response_model=list[FlagOut])
+def list_flags(
+    db: Session = Depends(get_db),
+    user: UserContext = Depends(get_user),
+):
+    ensure_admin(user)
+    flags = (
+        db.execute(
+            select(Flag)
+            .where(Flag.resolved == False)  # noqa: E712
+            .order_by(Flag.created_at.desc())
+        )
+        .scalars()
+        .all()
+    )
+    return [serialize_flag(flag) for flag in flags]
+
+
+@app.post("/api/admin/flags/{flag_id}/resolve", response_model=FlagOut)
+def resolve_flag(
+    flag_id: int,
+    db: Session = Depends(get_db),
+    user: UserContext = Depends(get_user),
+):
+    ensure_admin(user)
+    flag = db.get(Flag, flag_id)
+    if not flag:
+        raise HTTPException(status_code=404, detail="Flag not found")
+    flag.resolved = True
+    db.flush()
+    db.refresh(flag)
+    return serialize_flag(flag)
 
 
 @app.get("/api/admin/clubs/pending", response_model=list[ClubSummary])
