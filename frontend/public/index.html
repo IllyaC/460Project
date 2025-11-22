@@ -82,7 +82,7 @@
     </div>
     <table>
       <thead>
-        <tr><th>ID</th><th>Title</th><th>When</th><th>Location</th><th>Category</th><th>Club</th><th>Capacity</th><th>Registered</th></tr>
+        <tr><th>ID</th><th>Title</th><th>When</th><th>Location</th><th>Category</th><th>Club</th><th>Capacity</th><th>Registered</th><th></th></tr>
       </thead>
       <tbody id="events_tbody"></tbody>
     </table>
@@ -147,6 +147,10 @@
     <label>Approve club ID <input type="number" id="approve_club_id"></label>
     <button onclick="approveClub()">Approve</button>
     <pre id="admin_result"></pre>
+    <div style="margin-top:12px;">
+      <button onclick="loadFlags()">Load flagged content</button>
+      <ul id="flagged_list"></ul>
+    </div>
   </section>
 
 <script>
@@ -216,7 +220,8 @@
       const tr = document.createElement("tr");
       tr.innerHTML = `<td>${ev.id}</td><td>${ev.title}</td><td>${new Date(ev.starts_at).toLocaleString()}</td>` +
                      `<td>${ev.location}</td><td>${ev.category}</td><td>${ev.club_id ?? '-'}</td>` +
-                     `<td>${ev.capacity || '∞'}</td><td>${ev.registration_count}</td>`;
+                     `<td>${ev.capacity || '∞'}</td><td>${ev.registration_count}</td>` +
+                     `<td><button onclick="flagEvent(${ev.id})">Flag</button></td>`;
       tbody.appendChild(tr);
     });
   }
@@ -288,7 +293,7 @@
     loadedClubId = id;
     const div = document.getElementById("club_detail");
     const members = data.members.map(m => `${m.user_email} (${m.role})`).join(', ') || '—';
-    const announcements = data.announcements.map(a => `<li><strong>${a.title}</strong> — ${a.body}</li>`).join('');
+    const announcements = data.announcements.map(a => `<li><strong>${a.title}</strong> — ${a.body} <button onclick=\"flagAnnouncement(${a.id})\">Flag</button></li>`).join('');
     const events = data.events.map(ev => `<li>${ev.title} (${new Date(ev.starts_at).toLocaleDateString()}) cap ${ev.capacity} regs ${ev.registration_count}</li>`).join('');
     div.innerHTML = `
       <h3>${data.club.name} ${data.club.approved ? '' : '(pending)'}</h3>
@@ -348,6 +353,58 @@
     });
     alert(`Club event: ${res.status}`);
     loadClubDetail();
+  }
+
+  async function flagEvent(id){
+    const reason = prompt("Why are you flagging this event?");
+    if(!reason){ return; }
+    try {
+      const res = await fetch(`${API}/flags`, {
+        method: "POST",
+        headers: buildHeaders(true),
+        body: JSON.stringify({ item_type: "event", item_id: id, reason })
+      });
+      alert(res.ok ? "Flag submitted" : `Flag failed: ${res.status}`);
+    } catch (err){
+      alert("Flag failed");
+    }
+  }
+
+  async function flagAnnouncement(id){
+    const reason = prompt("Why are you flagging this announcement?");
+    if(!reason){ return; }
+    try {
+      const res = await fetch(`${API}/flags`, {
+        method: "POST",
+        headers: buildHeaders(true),
+        body: JSON.stringify({ item_type: "announcement", item_id: id, reason })
+      });
+      alert(res.ok ? "Flag submitted" : `Flag failed: ${res.status}`);
+    } catch (err){
+      alert("Flag failed");
+    }
+  }
+
+  async function loadFlags(){
+    const res = await fetch(`${API}/admin/flags`, { headers: buildHeaders(false) });
+    const ul = document.getElementById("flagged_list");
+    ul.innerHTML = "";
+    if(res.status === 403){
+      ul.innerHTML = '<li>Admin role required</li>';
+      return;
+    }
+    const data = await res.json();
+    data.forEach(flag => {
+      const li = document.createElement("li");
+      li.innerHTML = `${flag.item_type} #${flag.item_id} — ${flag.reason} (${flag.user_email}) on ${new Date(flag.created_at).toLocaleString()} ` +
+                     `<button onclick="resolveFlag(${flag.id})">Resolve</button>`;
+      ul.appendChild(li);
+    });
+  }
+
+  async function resolveFlag(id){
+    await fetch(`${API}/admin/flags/${id}/resolve`, { method: "POST", headers: buildHeaders(false) });
+    loadFlags();
   }
 
   async function loadPendingClubs(){
