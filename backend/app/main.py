@@ -29,6 +29,7 @@ from .schemas import (
     FlagCreate,
     FlagOut,
     RegistrationCreate,
+    RegistrationOut,
 )
 
 # Load .env
@@ -293,6 +294,75 @@ def register(
     )
 
     return {"status": "ok", "registration_id": registration.id}
+
+
+@app.delete("/api/registrations/{event_id}")
+def unregister(
+    event_id: int,
+    db: Session = Depends(get_db),
+    user: UserContext = Depends(get_user),
+):
+    registration = db.execute(
+        select(Registration).where(
+            Registration.event_id == event_id,
+            Registration.user_email == user.email,
+        )
+    ).scalar_one_or_none()
+    if not registration:
+        raise HTTPException(status_code=404, detail="Registration not found")
+
+    db.delete(registration)
+    return {"status": "unregistered"}
+
+
+@app.get("/api/registrations/mine", response_model=list[RegistrationOut])
+def my_registrations(
+    db: Session = Depends(get_db),
+    user: UserContext = Depends(get_user),
+):
+    registrations = (
+        db.execute(
+            select(Registration)
+            .where(Registration.user_email == user.email)
+            .order_by(Registration.created_at.desc())
+        )
+        .scalars()
+        .all()
+    )
+
+    if not registrations:
+        return []
+
+    event_ids = [r.event_id for r in registrations]
+    events = (
+        db.execute(select(Event).where(Event.id.in_(event_ids)))
+        .scalars()
+        .all()
+    )
+    counts = dict(
+        db.execute(
+            select(Registration.event_id, func.count(Registration.id))
+            .where(Registration.event_id.in_(event_ids))
+            .group_by(Registration.event_id)
+        ).all()
+    )
+    events_by_id = {event.id: event for event in events}
+
+    def sort_key(registration: Registration):
+        event = events_by_id.get(registration.event_id)
+        return event.starts_at if event else datetime.max
+
+    results = []
+    for reg in sorted(registrations, key=sort_key):
+        event = events_by_id.get(reg.event_id)
+        if not event:
+            continue
+        registration_count = counts.get(event.id, 0)
+        results.append(
+            RegistrationOut(id=reg.id, event=serialize_event(event, registration_count))
+        )
+
+    return results
 
 
 @app.post("/api/clubs", response_model=ClubSummary)

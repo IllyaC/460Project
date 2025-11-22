@@ -18,6 +18,8 @@
     .row>div{flex:1 1 320px}
     pre{background:#0b1020;color:#e6edf3;padding:12px;border-radius:10px;overflow:auto;max-height:200px}
     small{display:block;color:#57606a;margin-top:4px}
+    .highlight{background:#fff3cd;transition:background 0.4s ease}
+    .clickable-row{cursor:pointer}
   </style>
 </head>
 <body>
@@ -76,8 +78,6 @@
         <label>Category <input id="event_category" value="tech"></label>
         <label>Club ID (optional) <input type="number" id="event_club"></label>
         <button onclick="createEvent()">Create</button>
-        <button onclick="registerEvent()">Register (ID below)</button>
-        <label>Event ID to register <input type="number" id="register_event_id" value="1"></label>
       </div>
     </div>
     <table>
@@ -88,6 +88,18 @@
     </table>
     <h3>Trending</h3>
     <ul id="trending_list"></ul>
+  </section>
+
+  <section>
+    <h2>My Events</h2>
+    <p>See the events this persona is registered for and jump to them in the main list.</p>
+    <button onclick="loadMyEvents()">Load my registered events</button>
+    <table>
+      <thead>
+        <tr><th>Title</th><th>When</th><th>Location</th><th>Category</th></tr>
+      </thead>
+      <tbody id="my_events_tbody"><tr><td colspan="4">Click the button above to load your registrations.</td></tr></tbody>
+    </table>
   </section>
 
   <section>
@@ -156,6 +168,8 @@
 <script>
   const API = "http://localhost:8000/api";
   let loadedClubId = null;
+  let myRegistrations = new Map();
+  let myEvents = [];
 
   function isoPlusDays(days){
     const dt = new Date(Date.now() + days * 86400000);
@@ -180,6 +194,58 @@
     return headers;
   }
 
+  async function fetchMyRegistrations(renderList=false){
+    try {
+      const res = await fetch(`${API}/registrations/mine`, { headers: buildHeaders(false) });
+      if(!res.ok){
+        myRegistrations = new Map();
+        myEvents = [];
+        if(renderList){ renderMyEvents(); }
+        return;
+      }
+      const data = await res.json();
+      myRegistrations = new Map(data.map(r => [r.event.id, r.id]));
+      myEvents = data.map(r => r.event);
+      if(renderList){ renderMyEvents(); }
+    } catch (err){
+      console.error("Failed to load registrations", err);
+      myRegistrations = new Map();
+      myEvents = [];
+      if(renderList){ renderMyEvents(); }
+    }
+  }
+
+  function focusEvent(eventId){
+    const row = document.getElementById(`event-row-${eventId}`);
+    if(row){
+      row.classList.add("highlight");
+      row.scrollIntoView({ behavior: "smooth", block: "center" });
+      setTimeout(() => row.classList.remove("highlight"), 1600);
+    } else {
+      alert("Event not in the current results. Run a search that includes it to jump there.");
+    }
+  }
+
+  function renderMyEvents(){
+    const tbody = document.getElementById("my_events_tbody");
+    tbody.innerHTML = "";
+    if(myEvents.length === 0){
+      tbody.innerHTML = '<tr><td colspan="4">No registrations yet for this persona.</td></tr>';
+      return;
+    }
+
+    myEvents
+      .slice()
+      .sort((a,b) => new Date(a.starts_at) - new Date(b.starts_at))
+      .forEach(ev => {
+        const tr = document.createElement("tr");
+        tr.classList.add("clickable-row");
+        tr.onclick = () => focusEvent(ev.id);
+        tr.innerHTML = `<td>${ev.title}</td><td>${new Date(ev.starts_at).toLocaleString()}</td><td>${ev.location}</td><td>${ev.category}</td>`;
+        tbody.appendChild(tr);
+      });
+  }
+
   async function createEvent(){
     const payload = {
       title: document.getElementById("event_title").value,
@@ -199,7 +265,7 @@
     listEvents();
   }
 
-  async function listEvents(){
+  async function listEvents(skipRegistrationSync = false){
     const params = new URLSearchParams();
     const start = document.getElementById("filter_start").value;
     const end = document.getElementById("filter_end").value;
@@ -212,16 +278,34 @@
     if(location) params.set("location", location);
     if(document.getElementById("filter_free").checked) params.set("free_only", true);
     if(sort) params.set("sort", sort);
+
+    if(!skipRegistrationSync){
+      await fetchMyRegistrations(false);
+    }
+
     const res = await fetch(`${API}/events?${params.toString()}`);
     const data = await res.json();
     const tbody = document.getElementById("events_tbody");
     tbody.innerHTML = "";
     data.forEach(ev => {
       const tr = document.createElement("tr");
+      tr.id = `event-row-${ev.id}`;
       tr.innerHTML = `<td>${ev.id}</td><td>${ev.title}</td><td>${new Date(ev.starts_at).toLocaleString()}</td>` +
                      `<td>${ev.location}</td><td>${ev.category}</td><td>${ev.club_id ?? '-'}</td>` +
-                     `<td>${ev.capacity || '∞'}</td><td>${ev.registration_count}</td>` +
-                     `<td><button onclick="flagEvent(${ev.id})">Flag</button></td>`;
+                     `<td>${ev.capacity || '∞'}</td><td>${ev.registration_count}</td>`;
+
+      const actionCell = document.createElement("td");
+      const isRegistered = myRegistrations.has(ev.id);
+      const regBtn = document.createElement("button");
+      regBtn.textContent = isRegistered ? "Unregister" : "Register";
+      regBtn.onclick = () => isRegistered ? unregisterEvent(ev.id) : registerEvent(ev.id);
+      const flagBtn = document.createElement("button");
+      flagBtn.textContent = "Flag";
+      flagBtn.onclick = () => flagEvent(ev.id);
+      actionCell.appendChild(regBtn);
+      actionCell.appendChild(document.createTextNode(" "));
+      actionCell.appendChild(flagBtn);
+      tr.appendChild(actionCell);
       tbody.appendChild(tr);
     });
   }
@@ -238,15 +322,31 @@
     });
   }
 
-  async function registerEvent(){
-    const id = Number(document.getElementById("register_event_id").value);
+  async function registerEvent(eventId){
     const res = await fetch(`${API}/registrations`, {
       method: "POST",
       headers: buildHeaders(true),
-      body: JSON.stringify({event_id: id})
+      body: JSON.stringify({event_id: eventId})
     });
-    alert(`Register: ${res.status}`);
-    listEvents();
+    const body = res.ok ? "Registered" : `Register failed: ${res.status}`;
+    alert(body);
+    await fetchMyRegistrations(true);
+    await listEvents(true);
+  }
+
+  async function unregisterEvent(eventId){
+    const res = await fetch(`${API}/registrations/${eventId}`, {
+      method: "DELETE",
+      headers: buildHeaders(false)
+    });
+    const body = res.ok ? "Unregistered" : `Unregister failed: ${res.status}`;
+    alert(body);
+    await fetchMyRegistrations(true);
+    await listEvents(true);
+  }
+
+  async function loadMyEvents(){
+    await fetchMyRegistrations(true);
   }
 
   async function loadClubs(){

@@ -30,6 +30,11 @@ class RegistrationCreate(BaseModel):
     event_id: int
 
 
+class RegistrationOut(BaseModel):
+    id: int
+    event: EventOut
+
+
 class ClubCreate(BaseModel):
     name: str
     description: str

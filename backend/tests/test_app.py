@@ -201,6 +201,63 @@ def test_registration_capacity_limit(client):
     assert second.status_code == 409
 
 
+def test_list_and_remove_my_registrations(client):
+    admin_headers = auth_headers("admin@school.edu", "admin")
+    student_headers = auth_headers("self@school.edu", "student")
+
+    event_payloads = [
+        {
+            "title": "Workshop One",
+            "starts_at": (datetime.utcnow() + timedelta(days=4)).isoformat(),
+            "location": "Hall 2",
+            "capacity": 5,
+            "price_cents": 0,
+            "category": "tech",
+            "club_id": None,
+        },
+        {
+            "title": "Workshop Two",
+            "starts_at": (datetime.utcnow() + timedelta(days=5)).isoformat(),
+            "location": "Hall 3",
+            "capacity": 5,
+            "price_cents": 0,
+            "category": "tech",
+            "club_id": None,
+        },
+    ]
+
+    created_ids = []
+    for payload in event_payloads:
+        resp = client.post("/api/events", json=payload, headers=admin_headers)
+        assert resp.status_code == 200
+        created_ids.append(resp.json()["id"])
+
+    for event_id in created_ids:
+        reg_resp = client.post(
+            "/api/registrations",
+            json={"event_id": event_id},
+            headers=student_headers,
+        )
+        assert reg_resp.status_code == 200
+
+    mine_resp = client.get("/api/registrations/mine", headers=student_headers)
+    assert mine_resp.status_code == 200
+    mine = mine_resp.json()
+    returned_event_ids = {item["event"]["id"] for item in mine}
+    assert set(created_ids).issubset(returned_event_ids)
+
+    delete_resp = client.delete(
+        f"/api/registrations/{created_ids[0]}", headers=student_headers
+    )
+    assert delete_resp.status_code == 200
+
+    mine_after = client.get("/api/registrations/mine", headers=student_headers)
+    assert mine_after.status_code == 200
+    after_ids = {item["event"]["id"] for item in mine_after.json()}
+    assert created_ids[0] not in after_ids
+    assert created_ids[1] in after_ids
+
+
 def test_club_creation_and_admin_approval(client):
     leader_headers = auth_headers("newleader@school.edu", "leader")
     create_resp = client.post(
