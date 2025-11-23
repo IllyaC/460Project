@@ -71,8 +71,42 @@
         <div class="filter-grid">
           <div class="filter-cluster">
             <p class="cluster-label">Dates</p>
-            <label>Starts after <input id="filter_start" placeholder="e.g., 2024-09-01T08:00:00Z"></label>
-            <label>Ends before <input id="filter_end" placeholder="e.g., 2024-09-30T23:59:59Z"></label>
+            <div class="datetime-filter">
+              <p class="hint">Starts after</p>
+              <div class="datetime-group">
+                <label>Date <input type="date" id="filter_start_date"></label>
+                <div class="time-fields">
+                  <label>Hour <input type="number" id="filter_start_hour" min="1" max="12" placeholder="HH"></label>
+                  <span class="time-separator">:</span>
+                  <label>Minute <input type="number" id="filter_start_minute" min="0" max="59" placeholder="MM"></label>
+                  <label class="ampm-select">AM/PM
+                    <select id="filter_start_ampm">
+                      <option value="">--</option>
+                      <option value="AM">AM</option>
+                      <option value="PM">PM</option>
+                    </select>
+                  </label>
+                </div>
+              </div>
+            </div>
+            <div class="datetime-filter">
+              <p class="hint">Ends before</p>
+              <div class="datetime-group">
+                <label>Date <input type="date" id="filter_end_date"></label>
+                <div class="time-fields">
+                  <label>Hour <input type="number" id="filter_end_hour" min="1" max="12" placeholder="HH"></label>
+                  <span class="time-separator">:</span>
+                  <label>Minute <input type="number" id="filter_end_minute" min="0" max="59" placeholder="MM"></label>
+                  <label class="ampm-select">AM/PM
+                    <select id="filter_end_ampm">
+                      <option value="">--</option>
+                      <option value="AM">AM</option>
+                      <option value="PM">PM</option>
+                    </select>
+                  </label>
+                </div>
+              </div>
+            </div>
           </div>
           <div class="filter-cluster">
             <p class="cluster-label">Details</p>
@@ -110,13 +144,31 @@
       <div class="panel">
         <h3>Create Event</h3>
         <p class="hint">Share a meetup, workshop, or social and put it on the radar.</p>
-        <label>Title <input id="event_title" value="Hack Night"></label>
-        <label>Starts At <input id="event_starts"></label>
-        <label>Location <input id="event_location" value="Student Union"></label>
-        <label>Capacity <input type="number" id="event_capacity" value="5"></label>
-        <label>Price (cents) <input type="number" id="event_price" value="0"></label>
-        <label>Category <input id="event_category" value="tech"></label>
-        <label>Club ID (optional) <input type="number" id="event_club"></label>
+        <label>Title <input id="event_title" placeholder="Workshop title"></label>
+        <div class="datetime-field">
+          <span class="datetime-title">Starts At</span>
+          <div class="datetime-group">
+            <label>Date <input type="date" id="event_start_date"></label>
+            <div class="time-fields">
+              <label class="sr-only" for="event_start_hour">Hour</label>
+              <input type="number" id="event_start_hour" min="1" max="12" placeholder="HH">
+              <span class="time-separator">:</span>
+              <label class="sr-only" for="event_start_minute">Minute</label>
+              <input type="number" id="event_start_minute" min="0" max="59" placeholder="MM">
+              <label class="sr-only" for="event_start_ampm">AM or PM</label>
+              <select id="event_start_ampm">
+                <option value="">AM/PM</option>
+                <option value="AM">AM</option>
+                <option value="PM">PM</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <label>Location <input id="event_location" placeholder="Student Union"></label>
+        <label>Capacity <input type="number" id="event_capacity" placeholder="25"></label>
+        <label>Price (cents) <input type="number" id="event_price" placeholder="0"></label>
+        <label>Category <input id="event_category" placeholder="tech, music, etc."></label>
+        <label>Club ID (optional) <input type="number" id="event_club" placeholder="123"></label>
         <div class="button-row">
           <button onclick="createEvent()">Create Event</button>
         </div>
@@ -191,7 +243,7 @@
           <p class="hint">Inspect a specific club and use leader tools when available.</p>
         </div>
         <div class="button-row inline">
-          <label>Club ID <input type="number" id="club_detail_id" value="1"></label>
+          <label>Club ID <input type="number" id="club_detail_id" placeholder="Club ID"></label>
           <button onclick="loadClubDetail()">Load Club</button>
         </div>
       </div>
@@ -212,12 +264,30 @@
             <h4>Schedule Club Event</h4>
             <p class="hint">Share dates, locations, and capacity for upcoming meetups.</p>
             <div class="form-grid">
-              <label>Title <input id="club_event_title" value="Study Session"></label>
-              <label>Starts At <input id="club_event_starts"></label>
-              <label>Location <input id="club_event_location" value="Library 201"></label>
-              <label>Capacity <input type="number" id="club_event_capacity" value="10"></label>
-              <label>Price (cents) <input type="number" id="club_event_price" value="0"></label>
-              <label>Category <input id="club_event_category" value="community"></label>
+              <label>Title <input id="club_event_title" placeholder="Workshop title"></label>
+              <div class="datetime-field">
+                <span class="datetime-title">Starts At</span>
+                <div class="datetime-group">
+                  <label>Date <input type="date" id="club_event_start_date"></label>
+                  <div class="time-fields">
+                    <label class="sr-only" for="club_event_start_hour">Hour</label>
+                    <input type="number" id="club_event_start_hour" min="1" max="12" placeholder="HH">
+                    <span class="time-separator">:</span>
+                    <label class="sr-only" for="club_event_start_minute">Minute</label>
+                    <input type="number" id="club_event_start_minute" min="0" max="59" placeholder="MM">
+                    <label class="sr-only" for="club_event_start_ampm">AM or PM</label>
+                    <select id="club_event_start_ampm">
+                      <option value="">AM/PM</option>
+                      <option value="AM">AM</option>
+                      <option value="PM">PM</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <label>Location <input id="club_event_location" placeholder="Event location"></label>
+              <label>Capacity <input type="number" id="club_event_capacity" placeholder="25"></label>
+              <label>Price (cents) <input type="number" id="club_event_price" placeholder="0"></label>
+              <label>Category <input id="club_event_category" placeholder="community"></label>
             </div>
             <div class="button-row aligned">
               <button onclick="createClubEvent()">Create Event</button>

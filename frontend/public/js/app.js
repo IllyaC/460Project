@@ -70,7 +70,10 @@ function startSession(){
   loadTrending();
   loadClubs();
   loadMyClubs();
-  loadClubDetail();
+  const clubDetailValue = document.getElementById("club_detail_id")?.value;
+  if(clubDetailValue){
+    loadClubDetail();
+  }
   if(personaRole === "admin"){
     loadPendingClubs();
     loadFlags();
@@ -131,4 +134,3 @@ function updateRoleVisibility(){
 resetAppContent();
 updateRoleVisibility();
 showNavSection("events");
-setDefaultDateInputs();
