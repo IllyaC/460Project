@@ -129,14 +129,7 @@
         </div>
         <button type="button" class="btn-secondary" onclick="loadEvents()">Refresh</button>
       </div>
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr><th>Title</th><th>Date &amp; Time</th><th>Location</th><th>Category</th><th>Price</th><th>Popularity</th><th>Actions</th></tr>
-          </thead>
-          <tbody id="events_tbody"></tbody>
-        </table>
-      </div>
+      <div id="events_list" class="event-list" aria-live="polite"></div>
     </div>
     <div class="panel">
       <div class="section-header compact">
@@ -419,7 +412,7 @@
     clearStatus("events_status");
     clearStatus("clubs_status");
     clearStatus("admin_status");
-    document.getElementById("events_tbody").innerHTML = "";
+    document.getElementById("events_list").innerHTML = "";
     document.getElementById("trending_list").innerHTML = "";
     document.getElementById("club_list").innerHTML = "";
     document.getElementById("club_detail").innerHTML = "";
@@ -560,61 +553,87 @@
     if(!skipRegistrationSync){
       await fetchMyRegistrations(false);
     }
-    const tbody = document.getElementById("events_tbody");
-    tbody.innerHTML = "";
+    const list = document.getElementById("events_list");
+    list.innerHTML = "";
 
     let res;
     try {
       res = await fetch(`${API}/events?${params.toString()}`);
     } catch (err){
       setStatus("events_status", "Failed to load events. Please try again.", "error");
-      tbody.innerHTML = '<tr><td colspan="7">Unable to reach the events service.</td></tr>';
+      list.innerHTML = '<div class="empty-state">Unable to reach the events service.</div>';
       return;
     }
 
     if(!res.ok){
       const body = await readJson(res);
       setStatus("events_status", `Failed to load events: ${buildErrorMessage(res, body)}`, "error");
-      tbody.innerHTML = '<tr><td colspan="7">Unable to load events.</td></tr>';
+      list.innerHTML = '<div class="empty-state">Unable to load events.</div>';
       return;
     }
 
     const data = await res.json();
     if(data.length === 0){
-      tbody.innerHTML = '<tr><td colspan="7">No events found. Adjust your filters and try again.</td></tr>';
+      list.innerHTML = '<div class="empty-state">No events found. Adjust your filters and try again.</div>';
       return;
     }
 
     data.forEach(ev => {
-      const tr = document.createElement("tr");
-      tr.id = `event-row-${ev.id}`;
+      const card = document.createElement("article");
+      card.classList.add("event-card");
+      card.id = `event-row-${ev.id}`;
       const price = formatPrice(ev.price_cents);
       const popularity = ev.registration_count ?? 0;
-      const capacity = ev.capacity ? `${popularity}/${ev.capacity}` : popularity;
-      tr.innerHTML = `<td>${ev.title}</td><td>${new Date(ev.starts_at).toLocaleString()}</td>` +
-                     `<td>${ev.location}</td><td>${ev.category}</td><td>${price}</td>` +
-                     `<td>${capacity}</td>`;
+      const capacityText = ev.capacity ? `${popularity} registered out of ${ev.capacity} seats` : `${popularity} registered`;
 
-      const actionCell = document.createElement("td");
+      const header = document.createElement("div");
+      header.className = "event-card__header";
+      header.innerHTML = `
+        <div>
+          <p class="event-card__title">${ev.title}</p>
+          <p class="event-card__datetime">${new Date(ev.starts_at).toLocaleString()}</p>
+        </div>
+        <div class="event-card__price">${price}</div>
+      `;
+
+      const meta = document.createElement("div");
+      meta.className = "event-card__meta";
+      meta.innerHTML = `
+        <span class="pill">${ev.location}</span>
+        <span class="pill pill-muted">${ev.category}</span>
+      `;
+
+      const stats = document.createElement("div");
+      stats.className = "event-card__stats";
+      stats.innerHTML = `
+        <span class="seat-info">${capacityText}</span>
+      `;
+
+      const actions = document.createElement("div");
+      actions.className = "event-card__actions";
       const isRegistered = myRegistrations.has(ev.id);
       const regBtn = document.createElement("button");
+      regBtn.classList.add("btn-primary", "register-btn");
       regBtn.textContent = isRegistered ? "Unregister" : "Register";
       regBtn.onclick = () => isRegistered ? unregisterEvent(ev.id) : registerEvent(ev.id);
       const flagBtn = document.createElement("button");
+      flagBtn.classList.add("btn-ghost");
       flagBtn.textContent = "Flag";
       flagBtn.onclick = () => flagEvent(ev.id);
-      actionCell.appendChild(regBtn);
-      actionCell.appendChild(document.createTextNode(" "));
-      actionCell.appendChild(flagBtn);
+      actions.appendChild(regBtn);
+      actions.appendChild(flagBtn);
       if(canManageEvent(ev)){
-        actionCell.appendChild(document.createTextNode(" "));
         const deleteBtn = document.createElement("button");
+        deleteBtn.classList.add("btn-secondary");
         deleteBtn.textContent = "Delete";
         deleteBtn.onclick = () => deleteEvent(ev.id);
-        actionCell.appendChild(deleteBtn);
+        actions.appendChild(deleteBtn);
       }
-      tr.appendChild(actionCell);
-      tbody.appendChild(tr);
+      card.appendChild(header);
+      card.appendChild(meta);
+      card.appendChild(stats);
+      card.appendChild(actions);
+      list.appendChild(card);
     });
   }
 
