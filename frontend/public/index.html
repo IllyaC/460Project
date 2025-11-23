@@ -4,27 +4,7 @@
   <meta charset="utf-8"/>
   <title>Campus Clubs & Events — Phase 2 Demo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <style>
-    :root{color-scheme:light dark;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
-    body{margin:24px;max-width:1100px}
-    section{border:1px solid #d0d7de;border-radius:12px;padding:18px;margin-bottom:18px;background:rgba(255,255,255,0.9)}
-    label{display:block;margin-top:8px;font-weight:600}
-    input,select,textarea{width:100%;max-width:420px;padding:8px;margin-top:4px;font:inherit}
-    textarea{min-height:80px}
-    button{margin-top:10px;padding:8px 12px;font:inherit;cursor:pointer}
-    table{width:100%;border-collapse:collapse;margin-top:12px}
-    th,td{border-bottom:1px solid #eaecef;padding:8px;text-align:left;font-size:0.95rem}
-    .row{display:flex;flex-wrap:wrap;gap:18px}
-    .row>div{flex:1 1 320px}
-    pre{background:#0b1020;color:#e6edf3;padding:12px;border-radius:10px;overflow:auto;max-height:200px}
-    small{display:block;color:#57606a;margin-top:4px}
-    .highlight{background:#fff3cd;transition:background 0.4s ease}
-    .clickable-row{cursor:pointer}
-    .hidden{display:none!important}
-    .nav-bar{display:flex;gap:8px;align-items:center;margin:18px 0;flex-wrap:wrap}
-    .nav-button{padding:10px 14px;border:1px solid #d0d7de;border-radius:8px;background:#f6f8fa;cursor:pointer;font:inherit}
-    .nav-button.active{background:#d0ebff;border-color:#84b5ff;font-weight:700}
-  </style>
+  <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
   <h1>Campus Clubs & Events</h1>
@@ -110,7 +90,7 @@
       <tbody id="events_tbody"></tbody>
     </table>
     <h3>Trending</h3>
-    <ul id="trending_list"></ul>
+    <ul id="trending_list" class="card-list compact-list"></ul>
   </section>
 
   <section data-section-group="mystuff">
@@ -131,7 +111,7 @@
       <div>
         <p>Join or leave clubs directly from the list using the buttons below.</p>
         <button onclick="loadClubs()">Refresh clubs</button>
-        <ul id="club_list"></ul>
+        <ul id="club_list" class="card-list"></ul>
       </div>
       <div>
         <h3>Create a club</h3>
@@ -180,19 +160,19 @@
     <h2>My Clubs</h2>
     <p>Shows clubs where this persona has an approved membership.</p>
     <button onclick="loadMyClubs()">Load my clubs</button>
-    <ul id="my_club_list"><li>Use the persona headers above, then click the button to load.</li></ul>
+    <ul id="my_club_list" class="card-list"><li>Use the persona headers above, then click the button to load.</li></ul>
   </section>
 
   <section class="admin-only" data-section-group="admin">
     <h2>Admin dashboard</h2>
     <button onclick="loadPendingClubs()">Load pending clubs</button>
-    <ul id="pending_club_list"></ul>
+    <ul id="pending_club_list" class="card-list"></ul>
     <label>Approve club ID <input type="number" id="approve_club_id"></label>
     <button onclick="approveClub()">Approve</button>
     <pre id="admin_result"></pre>
-    <div style="margin-top:12px;">
+    <div class="spaced-block">
       <button onclick="loadFlags()">Load flagged content</button>
-      <ul id="flagged_list"></ul>
+      <ul id="flagged_list" class="card-list compact-list"></ul>
     </div>
   </section>
 
