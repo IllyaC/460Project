@@ -438,6 +438,8 @@ def test_club_creation_and_admin_approval(client):
     )
     assert create_resp.status_code == 200
     club = create_resp.json()
+    assert club["name"] == "Chess Stars"
+    assert club["description"] == "Chess strategy sessions"
     assert club["approved"] is False
     club_id = club["id"]
 
@@ -448,6 +450,9 @@ def test_club_creation_and_admin_approval(client):
     assert pending_resp.status_code == 200
     pending_ids = [c["id"] for c in pending_resp.json()]
     assert club_id in pending_ids
+    pending_entry = next(c for c in pending_resp.json() if c["id"] == club_id)
+    assert pending_entry["approved"] is False
+    assert pending_entry["created_by_email"] == "newleader@school.edu"
 
     approve_resp = client.post(
         f"/api/admin/clubs/{club_id}/approve",
@@ -465,6 +470,18 @@ def test_club_creation_and_admin_approval(client):
             )
         ).scalars().all()
         assert leaders
+
+
+def test_create_club_requires_fields(client):
+    leader_headers = auth_headers("newleader@school.edu", "leader")
+    response = client.post(
+        "/api/clubs",
+        json={"name": " ", "description": ""},
+        headers=leader_headers,
+    )
+    assert response.status_code == 422
+    detail = response.json().get("detail", [])
+    assert any("must not be empty" in str(err) for err in detail)
 
 
 def test_join_club_and_approval_flow(client):

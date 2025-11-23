@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 
 class EventCreate(BaseModel):
@@ -38,6 +38,14 @@ class RegistrationOut(BaseModel):
 class ClubCreate(BaseModel):
     name: str
     description: str
+
+    @field_validator("name", "description")
+    @classmethod
+    def must_not_be_empty(cls, value: str):
+        cleaned = value.strip() if isinstance(value, str) else ""
+        if not cleaned:
+            raise ValueError("must not be empty")
+        return cleaned
 
 
 class ClubSummary(BaseModel):

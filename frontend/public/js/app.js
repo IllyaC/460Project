@@ -88,6 +88,8 @@ function resetAppContent(){
   document.getElementById("events_list").innerHTML = "";
   document.getElementById("trending_list").innerHTML = "";
   document.getElementById("club_list").innerHTML = "";
+  document.getElementById("club_name").value = "";
+  document.getElementById("club_desc").value = "";
   document.getElementById("club_detail").innerHTML = "";
   document.getElementById("pending_club_tbody").innerHTML = '<tr><td colspan="4" class="empty-state">Load pending clubs to review submissions.</td></tr>';
   document.getElementById("flagged_tbody").innerHTML = '<tr><td colspan="6" class="empty-state">Load flagged content to review reports.</td></tr>';
