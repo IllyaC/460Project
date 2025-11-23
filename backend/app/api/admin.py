@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from ..deps import ensure_admin, get_db, get_user
 from ..models import Club, ClubMember, Flag, User
-from ..schemas import ClubSummary, FlagOut
+from ..schemas import ClubSummary, FlagOut, UserOut
 from ..services import club_summary, serialize_flag
 
 router = APIRouter()
@@ -89,3 +89,37 @@ def approve_club(
             )
         )
     return club_summary(db, club)
+
+
+@router.get("/api/admin/leaders/pending", response_model=list[UserOut])
+def pending_leaders(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_user),
+):
+    ensure_admin(user)
+    leaders = (
+        db.execute(
+            select(User)
+            .where(User.role == "leader", User.is_approved == False)  # noqa: E712
+            .order_by(User.username.asc())
+        )
+        .scalars()
+        .all()
+    )
+    return [UserOut.model_validate(leader, from_attributes=True) for leader in leaders]
+
+
+@router.post("/api/admin/leaders/{user_id}/approve", response_model=UserOut)
+def approve_leader(
+    user_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_user),
+):
+    ensure_admin(user)
+    leader = db.get(User, user_id)
+    if not leader or leader.role != "leader":
+        raise HTTPException(status_code=404, detail="Leader not found")
+    leader.is_approved = True
+    db.flush()
+    db.refresh(leader)
+    return UserOut.model_validate(leader, from_attributes=True)

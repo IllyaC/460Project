@@ -155,3 +155,14 @@ function apiApproveClub(id){
     headers: buildHeaders(false)
   });
 }
+
+function apiGetPendingLeaders(){
+  return fetch(`${API}/admin/leaders/pending`, { headers: buildHeaders(false) });
+}
+
+function apiApproveLeader(id){
+  return fetch(`${API}/admin/leaders/${id}/approve`, {
+    method: "POST",
+    headers: buildHeaders(false)
+  });
+}
