@@ -203,6 +203,10 @@ section {
   box-shadow: 0 4px 18px rgba(31, 41, 55, 0.06);
 }
 
+.events-section {
+  margin-top: 18px;
+}
+
 .panel.table-panel {
   margin-top: 10px;
 }
