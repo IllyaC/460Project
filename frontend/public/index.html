@@ -7,32 +7,34 @@
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
+  <div id="top_bar" class="top-bar hidden">
+    <div id="user_summary" class="user-summary"></div>
+    <a href="#" id="switch_user_link" class="switch-user" onclick="switchUser(event)">Switch user</a>
+  </div>
+
   <h1>Campus Clubs & Events</h1>
 
-  <section>
-    <h2>Persona headers</h2>
+  <section id="login_section">
+    <h2>Login</h2>
+    <p>Choose who you want to explore the campus portal as.</p>
     <div class="row">
       <div>
-        <label>Email <input id="persona_email" value="student@example.edu"></label>
+        <label>Name <input id="login_name" placeholder="Jordan Rivera"></label>
+        <label>Email <input id="login_email" placeholder="student@example.edu"></label>
         <label>Role
-          <select id="persona_role">
-            <option value="student">student</option>
-            <option value="leader">leader</option>
-            <option value="admin">admin</option>
+          <select id="login_role">
+            <option value="student">Student</option>
+            <option value="leader">Club Leader</option>
+            <option value="admin">Admin</option>
           </select>
         </label>
-        <small>These map to <code>X-User-Email</code> and <code>X-User-Role</code> headers.</small>
-      </div>
-      <div>
-        <label>Club Leader Quick-fill
-          <button type="button" onclick="setPersona('leader@school.edu','leader')">AI Club Leader</button>
-        </label>
-        <label>Admin Quick-fill
-          <button type="button" onclick="setPersona('admin@school.edu','admin')">Admin</button>
-        </label>
+        <button type="button" onclick="handleLogin()">Continue</button>
+        <p id="login_status" class="status" aria-live="polite"></p>
       </div>
     </div>
   </section>
+
+  <div id="app_shell" class="hidden">
 
   <nav class="nav-bar">
     <button type="button" class="nav-button" id="nav-events" data-target="events" onclick="showNavSection('events')">Events</button>
@@ -96,7 +98,7 @@
 
   <section data-section-group="mystuff">
     <h2>My Events</h2>
-    <p>See the events this persona is registered for and jump to them in the main list.</p>
+    <p>See the events this user is registered for and jump to them in the main list.</p>
     <button onclick="loadMyEvents()">Load my registered events</button>
     <table>
       <thead>
@@ -161,9 +163,9 @@
 
   <section data-section-group="mystuff">
     <h2>My Clubs</h2>
-    <p>Shows clubs where this persona has an approved membership.</p>
+    <p>Shows clubs where this user has an approved membership.</p>
     <button onclick="loadMyClubs()">Load my clubs</button>
-    <ul id="my_club_list" class="card-list"><li>Use the persona headers above, then click the button to load.</li></ul>
+    <ul id="my_club_list" class="card-list"><li>Use the login above, then click the button to load.</li></ul>
   </section>
 
   <section class="admin-only" data-section-group="admin">
@@ -180,6 +182,8 @@
     </div>
   </section>
 
+  </div>
+
 <script>
   const API = "http://localhost:8000/api";
   let loadedClubId = null;
@@ -188,6 +192,9 @@
   let clubMemberships = new Map();
   let clubRoles = new Map();
   let myClubs = [];
+  let personaName = "";
+  let personaEmail = "";
+  let personaRole = "";
 
   function setStatus(id, message, type = "info"){
     const el = document.getElementById(id);
@@ -222,16 +229,87 @@
   document.getElementById("event_starts").value = isoPlusDays(2);
   document.getElementById("club_event_starts").value = isoPlusDays(5);
 
-  function setPersona(email, role){
-    document.getElementById("persona_email").value = email;
-    document.getElementById("persona_role").value = role;
+  function updateUserSummary(){
+    const summary = document.getElementById("user_summary");
+    if(!personaEmail){
+      summary.textContent = "";
+      return;
+    }
+    const displayRole = personaRole === "leader" ? "Club Leader" : personaRole.charAt(0).toUpperCase() + personaRole.slice(1);
+    const displayName = personaName ? `${personaName} • ` : "";
+    summary.textContent = `${displayName}${personaEmail} (${displayRole})`;
+  }
+
+  function handleLogin(){
+    const name = document.getElementById("login_name").value.trim();
+    const email = document.getElementById("login_email").value.trim();
+    const role = document.getElementById("login_role").value;
+
+    if(!name || !email){
+      setStatus("login_status", "Name and email are required to continue.", "error");
+      return;
+    }
+
+    personaName = name;
+    personaEmail = email;
+    personaRole = role;
+    clearStatus("login_status");
+    startSession();
+  }
+
+  function switchUser(event){
+    event?.preventDefault();
+    personaName = "";
+    personaEmail = "";
+    personaRole = "";
+    myRegistrations = new Map();
+    myEvents = [];
+    clubMemberships = new Map();
+    clubRoles = new Map();
+    myClubs = [];
+    resetAppContent();
+    document.getElementById("login_name").value = "";
+    document.getElementById("login_email").value = "";
+    document.getElementById("login_role").value = "student";
+    document.getElementById("login_section").classList.remove("hidden");
+    document.getElementById("app_shell").classList.add("hidden");
+    document.getElementById("top_bar").classList.add("hidden");
     updateRoleVisibility();
+    updateUserSummary();
+  }
+
+  function startSession(){
+    document.getElementById("login_section").classList.add("hidden");
+    document.getElementById("app_shell").classList.remove("hidden");
+    document.getElementById("top_bar").classList.remove("hidden");
+    updateRoleVisibility();
+    updateUserSummary();
+    showNavSection("events");
+    loadEvents();
+    loadTrending();
+    loadClubs();
+    loadMyClubs();
+    loadClubDetail();
+  }
+
+  function resetAppContent(){
+    clearStatus("events_status");
+    clearStatus("clubs_status");
+    clearStatus("admin_status");
+    document.getElementById("events_tbody").innerHTML = "";
+    document.getElementById("trending_list").innerHTML = "";
+    document.getElementById("club_list").innerHTML = "";
+    document.getElementById("club_detail").innerHTML = "";
+    document.getElementById("pending_club_list").innerHTML = "";
+    document.getElementById("flagged_list").innerHTML = "";
+    document.getElementById("my_events_tbody").innerHTML = '<tr><td colspan="4">Use the login form to load your registrations.</td></tr>';
+    document.getElementById("my_club_list").innerHTML = '<li>Use the login form to load your clubs.</li>';
   }
 
   function buildHeaders(json=true){
     const headers = {
-      "X-User-Email": document.getElementById("persona_email").value,
-      "X-User-Role": document.getElementById("persona_role").value
+      "X-User-Email": personaEmail,
+      "X-User-Role": personaRole
     };
     if(json){ headers["Content-Type"] = "application/json"; }
     return headers;
@@ -239,8 +317,8 @@
 
   function currentPersona(){
     return {
-      email: document.getElementById("persona_email").value,
-      role: document.getElementById("persona_role").value
+      email: personaEmail,
+      role: personaRole
     };
   }
 
@@ -288,7 +366,7 @@
     const tbody = document.getElementById("my_events_tbody");
     tbody.innerHTML = "";
     if(myEvents.length === 0){
-      tbody.innerHTML = '<tr><td colspan="4">No registrations yet for this persona.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="4">No registrations yet for this user.</td></tr>';
       return;
     }
 
@@ -546,7 +624,7 @@
     const ul = document.getElementById("my_club_list");
     ul.innerHTML = "";
     if(myClubs.length === 0){
-      ul.innerHTML = '<li>No approved club memberships for this persona yet.</li>';
+      ul.innerHTML = '<li>No approved club memberships for this user yet.</li>';
       return;
     }
     myClubs.forEach(club => {
@@ -901,12 +979,12 @@
   }
 
   function updateRoleVisibility(){
-    const role = document.getElementById("persona_role").value;
+    const role = personaRole;
     document.querySelectorAll(".admin-only").forEach(el => {
       el.classList.toggle("hidden", role !== "admin");
     });
     document.querySelectorAll(".leader-only").forEach(el => {
-      el.classList.toggle("hidden", role === "student");
+      el.classList.toggle("hidden", role !== "leader" && role !== "admin");
     });
 
     const activeNav = document.querySelector(".nav-button.active")?.dataset.target ?? "events";
@@ -915,20 +993,7 @@
     }
   }
 
-  document.getElementById("persona_role").addEventListener("change", () => {
-    updateRoleVisibility();
-  });
-
-  document.getElementById("persona_email").addEventListener("change", () => {
-    // keep UI role-aware when persona changes email only
-    updateRoleVisibility();
-  });
-
-  loadEvents();
-  loadTrending();
-  loadClubs();
-  loadMyClubs();
-  loadClubDetail();
+  resetAppContent();
   updateRoleVisibility();
   showNavSection("events");
 </script>

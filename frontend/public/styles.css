@@ -37,6 +37,30 @@ h1 {
   margin-bottom: 20px;
 }
 
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+
+.user-summary {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.switch-user {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.switch-user:hover {
+  text-decoration: underline;
+}
+
 h2 {
   font-size: 1.35rem;
 }
