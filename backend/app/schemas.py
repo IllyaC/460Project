@@ -48,6 +48,7 @@ class ClubSummary(BaseModel):
     created_by_email: str
     member_count: int
     upcoming_event_count: int
+    membership_status: Optional[str] = None
 
 
 class ClubMemberOut(BaseModel):

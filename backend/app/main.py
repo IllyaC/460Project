@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 import os
-from typing import Literal
+from typing import Literal, Optional
 
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -388,10 +388,25 @@ def create_club(
             status="pending",
         )
     )
-    return club_summary(db, club)
+    return club_summary(db, club, user.email)
 
 
-def club_summary(db: Session, club: Club) -> ClubSummary:
+def club_summary(db: Session, club: Club, user_email: Optional[str] = None) -> ClubSummary:
+    membership_status = None
+    if user_email:
+        membership = (
+            db.execute(
+                select(ClubMember).where(
+                    ClubMember.club_id == club.id,
+                    ClubMember.user_email == user_email,
+                )
+            )
+            .scalars()
+            .first()
+        )
+        if membership:
+            membership_status = membership.status
+
     member_count = (
         db.execute(
             select(func.count(ClubMember.id)).where(
@@ -418,21 +433,48 @@ def club_summary(db: Session, club: Club) -> ClubSummary:
         created_by_email=club.created_by_email,
         member_count=member_count,
         upcoming_event_count=upcoming_events,
+        membership_status=membership_status,
     )
 
 
 @app.get("/api/clubs", response_model=list[ClubSummary])
-def list_clubs(db: Session = Depends(get_db)):
+def list_clubs(db: Session = Depends(get_db), user: UserContext = Depends(get_user)):
     clubs = db.execute(select(Club).order_by(Club.name.asc())).scalars().all()
-    return [club_summary(db, club) for club in clubs]
+    return [club_summary(db, club, user.email) for club in clubs]
+
+
+@app.get("/api/clubs/mine", response_model=list[ClubSummary])
+def my_clubs(db: Session = Depends(get_db), user: UserContext = Depends(get_user)):
+    memberships = (
+        db.execute(
+            select(ClubMember).where(
+                ClubMember.user_email == user.email,
+                ClubMember.status == "approved",
+            )
+        )
+        .scalars()
+        .all()
+    )
+    if not memberships:
+        return []
+
+    club_ids = {m.club_id for m in memberships}
+    clubs = (
+        db.execute(select(Club).where(Club.id.in_(club_ids)).order_by(Club.name.asc()))
+        .scalars()
+        .all()
+    )
+    return [club_summary(db, club, user.email) for club in clubs]
 
 
 @app.get("/api/clubs/{club_id}", response_model=ClubDetail)
-def get_club(club_id: int, db: Session = Depends(get_db)):
+def get_club(
+    club_id: int, db: Session = Depends(get_db), user: UserContext = Depends(get_user)
+):
     club = db.get(Club, club_id)
     if not club:
         raise HTTPException(status_code=404, detail="Club not found")
-    summary = club_summary(db, club)
+    summary = club_summary(db, club, user.email)
     members = (
         db.execute(select(ClubMember).where(ClubMember.club_id == club.id))
         .scalars()
@@ -501,6 +543,30 @@ def join_club(
         )
     )
     return {"status": "pending", "message": "Request submitted"}
+
+
+@app.post("/api/clubs/{club_id}/leave")
+def leave_club(
+    club_id: int,
+    db: Session = Depends(get_db),
+    user: UserContext = Depends(get_user),
+):
+    club = db.get(Club, club_id)
+    if not club:
+        raise HTTPException(status_code=404, detail="Club not available")
+
+    membership = db.execute(
+        select(ClubMember).where(
+            ClubMember.club_id == club_id,
+            ClubMember.user_email == user.email,
+        )
+    ).scalar_one_or_none()
+
+    if not membership or membership.status == "removed":
+        raise HTTPException(status_code=404, detail="Membership not found")
+
+    membership.status = "removed"
+    return {"status": "removed"}
 
 
 @app.post("/api/clubs/{club_id}/members/{member_email}/approve")
