@@ -143,6 +143,39 @@ def test_unapproved_leader_blocked_from_leader_actions(client):
     )
     assert create_resp.status_code == 403
 
+
+def test_admin_can_approve_pending_leader(client):
+    leader_resp = client.post(
+        "/api/auth/register",
+        json={
+            "username": "approvalqueue",
+            "email": "approvalqueue@school.edu",
+            "password": "password123",
+            "desired_role": "leader",
+        },
+    )
+    assert leader_resp.status_code == 200
+    leader = leader_resp.json()
+    assert leader["is_approved"] is False
+
+    admin_headers = auth_headers("admin@school.edu", "admin")
+
+    pending_before = client.get("/api/admin/leaders/pending", headers=admin_headers)
+    assert pending_before.status_code == 200
+    pending_ids = {user["id"] for user in pending_before.json()}
+    assert leader["id"] in pending_ids
+
+    approve_resp = client.post(
+        f"/api/admin/leaders/{leader['id']}/approve", headers=admin_headers
+    )
+    assert approve_resp.status_code == 200
+    approved = approve_resp.json()
+    assert approved["is_approved"] is True
+
+    pending_after = client.get("/api/admin/leaders/pending", headers=admin_headers)
+    assert pending_after.status_code == 200
+    assert all(user["id"] != leader["id"] for user in pending_after.json())
+
 def test_list_events_basic(client):
     response = client.get("/api/events", headers=auth_headers("student1@school.edu", "student"))
     assert response.status_code == 200

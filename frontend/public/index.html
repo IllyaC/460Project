@@ -397,6 +397,26 @@
       <div class="panel admin-panel">
         <div class="section-header compact">
           <div>
+            <h3>Pending Leaders</h3>
+            <p class="hint">Approve leader accounts before they manage clubs.</p>
+          </div>
+          <button onclick="loadPendingLeaders()">Load Pending Leaders</button>
+        </div>
+        <div class="table-wrapper">
+          <table class="admin-table">
+            <thead>
+              <tr><th>User</th><th>Email</th><th>Action</th></tr>
+            </thead>
+            <tbody id="pending_leader_tbody">
+              <tr><td colspan="3" class="empty-state">Load pending leaders to review requests.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div id="pending_leader_status" class="section-status status" aria-live="polite"></div>
+      </div>
+      <div class="panel admin-panel">
+        <div class="section-header compact">
+          <div>
             <h3>Flagged Content</h3>
             <p class="hint">Resolve reports from across the app.</p>
           </div>

@@ -125,3 +125,69 @@ async function approveClub(idOverride){
   loadClubs();
   loadPendingClubs();
 }
+
+async function loadPendingLeaders(){
+  if(personaRole !== "admin"){
+    setStatus("pending_leader_status", "Admin role required.", "error");
+    return;
+  }
+  const tbody = document.getElementById("pending_leader_tbody");
+  tbody.innerHTML = "";
+  try {
+    const res = await apiGetPendingLeaders();
+    if(res.status === 403){
+      setStatus("pending_leader_status", "Admin role required.", "error");
+      tbody.innerHTML = '<tr><td colspan="3" class="empty-state">Admin role required.</td></tr>';
+      return;
+    }
+    if(!res.ok){
+      const body = await readJson(res);
+      setStatus(
+        "pending_leader_status",
+        `Failed to load pending leaders: ${buildErrorMessage(res, body)}`,
+        "error"
+      );
+      tbody.innerHTML = '<tr><td colspan="3" class="empty-state">No pending leaders.</td></tr>';
+      return;
+    }
+    const data = await res.json();
+    if(data.length === 0){
+      tbody.innerHTML = '<tr><td colspan="3" class="empty-state">No pending leaders.</td></tr>';
+      clearStatus("pending_leader_status");
+      return;
+    }
+    clearStatus("pending_leader_status");
+    data.forEach(leader => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+          <td><div class="table-title">${leader.username}</div><div class="muted">ID ${leader.id}</div></td>
+          <td>${leader.email}</td>
+          <td><button class="btn-secondary" onclick="approveLeader(${leader.id})">Approve</button></td>
+        `;
+      tbody.appendChild(tr);
+    });
+  } catch (err){
+    setStatus("pending_leader_status", "Failed to load pending leaders.", "error");
+    tbody.innerHTML = '<tr><td colspan="3" class="empty-state">No pending leaders.</td></tr>';
+  }
+}
+
+async function approveLeader(idOverride){
+  if(personaRole !== "admin"){
+    setStatus("pending_leader_status", "Admin role required.", "error");
+    return;
+  }
+  const id = typeof idOverride === "number" ? idOverride : null;
+  if(!id){
+    setStatus("pending_leader_status", "Choose a leader to approve.", "error");
+    return;
+  }
+  const res = await apiApproveLeader(id);
+  const body = await readJson(res);
+  if(res.ok){
+    setStatus("pending_leader_status", "Leader approved successfully.", "success");
+  } else {
+    setStatus("pending_leader_status", `Approve failed: ${buildErrorMessage(res, body)}`, "error");
+  }
+  loadPendingLeaders();
+}
