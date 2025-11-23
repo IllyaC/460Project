@@ -178,6 +178,7 @@
   let myRegistrations = new Map();
   let myEvents = [];
   let clubMemberships = new Map();
+  let clubRoles = new Map();
   let myClubs = [];
 
   function isoPlusDays(days){
@@ -201,6 +202,21 @@
     };
     if(json){ headers["Content-Type"] = "application/json"; }
     return headers;
+  }
+
+  function currentPersona(){
+    return {
+      email: document.getElementById("persona_email").value,
+      role: document.getElementById("persona_role").value
+    };
+  }
+
+  function canManageEvent(event){
+    const persona = currentPersona();
+    if(persona.role === "admin"){ return true; }
+    if(!event.club_id){ return false; }
+    const membershipRole = clubRoles.get(event.club_id);
+    return persona.role === "leader" && membershipRole === "leader";
   }
 
   async function fetchMyRegistrations(renderList=false){
@@ -314,6 +330,13 @@
       actionCell.appendChild(regBtn);
       actionCell.appendChild(document.createTextNode(" "));
       actionCell.appendChild(flagBtn);
+      if(canManageEvent(ev)){
+        actionCell.appendChild(document.createTextNode(" "));
+        const deleteBtn = document.createElement("button");
+        deleteBtn.textContent = "Delete";
+        deleteBtn.onclick = () => deleteEvent(ev.id);
+        actionCell.appendChild(deleteBtn);
+      }
       tr.appendChild(actionCell);
       tbody.appendChild(tr);
     });
@@ -352,6 +375,22 @@
     alert(body);
     await fetchMyRegistrations(true);
     await listEvents(true);
+  }
+
+  async function deleteEvent(eventId){
+    if(!confirm("Delete this event?")){ return; }
+    const res = await fetch(`${API}/events/${eventId}`, {
+      method: "DELETE",
+      headers: buildHeaders(false)
+    });
+    const detail = await res.json().catch(() => ({}));
+    const message = res.ok ? "Event deleted" : `Delete failed: ${res.status}${detail.detail ? ` - ${detail.detail}` : ''}`;
+    alert(message);
+    await fetchMyRegistrations(true);
+    await listEvents();
+    if(loadedClubId){
+      await loadClubDetail();
+    }
   }
 
   async function loadMyEvents(){
@@ -393,6 +432,7 @@
     const res = await fetch(`${API}/clubs`, { headers: buildHeaders(false) });
     const data = await res.json();
     clubMemberships = new Map(data.map(club => [club.id, club.membership_status]));
+    clubRoles = new Map(data.map(club => [club.id, club.membership_role]));
     renderClubs(data);
   }
 
@@ -475,9 +515,17 @@
     const div = document.getElementById("club_detail");
     const members = data.members.map(m => `${m.user_email} (${m.role}, ${m.status})`).join(', ') || '—';
     const announcements = data.announcements.map(a => `<li><strong>${a.title}</strong> — ${a.body} <button onclick=\"flagAnnouncement(${a.id})\">Flag</button></li>`).join('');
-    const events = data.events.map(ev => `<li>${ev.title} (${new Date(ev.starts_at).toLocaleDateString()}) cap ${ev.capacity} regs ${ev.registration_count}</li>`).join('');
+    const persona = currentPersona();
+    const isClubLeader = data.members.some(m => m.user_email === persona.email && m.role === "leader" && m.status === "approved");
+    const canManageClubEvents = persona.role === "admin" || isClubLeader;
+    const events = data.events
+      .map(ev => {
+        const deleteBtn = canManageClubEvents ? ` <button onclick="deleteEvent(${ev.id})">Delete</button>` : '';
+        return `<li>${ev.title} (${new Date(ev.starts_at).toLocaleDateString()}) cap ${ev.capacity} regs ${ev.registration_count}${deleteBtn}</li>`;
+      })
+      .join('');
     const pendingMembers = data.members.filter(m => m.status === "pending");
-    const role = document.getElementById("persona_role").value;
+    const role = persona.role;
     const pendingList = pendingMembers.length
       ? pendingMembers.map(m => `<li>${m.user_email} (${m.role}) <button onclick=\"approveMember('${m.user_email}')\">Approve</button></li>`).join('')
       : '<li>No pending requests</li>';

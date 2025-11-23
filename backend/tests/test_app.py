@@ -37,6 +37,17 @@ def auth_headers(email: str, role: str) -> dict[str, str]:
     return {"X-User-Email": email, "X-User-Role": role}
 
 
+def get_club_id_by_name(name: str) -> int:
+    with TestingSessionLocal() as session:
+        club = (
+            session.execute(select(models.Club).where(models.Club.name == name))
+            .scalars()
+            .first()
+        )
+        assert club is not None
+        return club.id
+
+
 @pytest.fixture(autouse=True)
 def setup_test_db():
     Base.metadata.drop_all(bind=engine)
@@ -126,6 +137,80 @@ def test_event_filters_and_trending(client):
     assert trending[0]["registration_count"] >= trending[1]["registration_count"]
     if trending[0]["registration_count"] == trending[1]["registration_count"]:
         assert trending[0]["starts_at"] <= trending[1]["starts_at"]
+
+
+def test_leader_can_delete_owned_club_event(client):
+    club_id = get_club_id_by_name("AI Club")
+    leader_headers = auth_headers("leader@school.edu", "leader")
+    payload = {
+        "title": "Leader Only Event",
+        "starts_at": (datetime.utcnow() + timedelta(days=3)).isoformat(),
+        "location": "ENG 202",
+        "capacity": 5,
+        "price_cents": 0,
+        "category": "tech",
+    }
+
+    create_resp = client.post(
+        f"/api/clubs/{club_id}/events", json=payload, headers=leader_headers
+    )
+    assert create_resp.status_code == 200
+    event_id = create_resp.json()["id"]
+
+    delete_resp = client.delete(
+        f"/api/events/{event_id}", headers=leader_headers
+    )
+    assert delete_resp.status_code == 200
+    with TestingSessionLocal() as session:
+        deleted = session.get(models.Event, event_id)
+        assert deleted is None
+
+
+def test_non_leader_cannot_delete_club_event(client):
+    club_id = get_club_id_by_name("AI Club")
+    leader_headers = auth_headers("leader@school.edu", "leader")
+    payload = {
+        "title": "Protected Event",
+        "starts_at": (datetime.utcnow() + timedelta(days=2)).isoformat(),
+        "location": "ENG 203",
+        "capacity": 10,
+        "price_cents": 0,
+        "category": "tech",
+    }
+    create_resp = client.post(
+        f"/api/clubs/{club_id}/events", json=payload, headers=leader_headers
+    )
+    event_id = create_resp.json()["id"]
+
+    student_headers = auth_headers("student@school.edu", "student")
+    delete_resp = client.delete(
+        f"/api/events/{event_id}", headers=student_headers
+    )
+    assert delete_resp.status_code == 403
+    with TestingSessionLocal() as session:
+        still_exists = session.get(models.Event, event_id)
+        assert still_exists is not None
+
+
+def test_admin_can_delete_general_event(client):
+    admin_headers = auth_headers("admin@school.edu", "admin")
+    payload = {
+        "title": "Admin Event",
+        "starts_at": (datetime.utcnow() + timedelta(days=4)).isoformat(),
+        "location": "Campus Center",
+        "capacity": 25,
+        "price_cents": 0,
+        "category": "general",
+        "club_id": None,
+    }
+    create_resp = client.post("/api/events", json=payload, headers=admin_headers)
+    assert create_resp.status_code == 200
+    event_id = create_resp.json()["id"]
+
+    delete_resp = client.delete(
+        f"/api/events/{event_id}", headers=admin_headers
+    )
+    assert delete_resp.status_code == 200
 
 
 def test_successful_registration_and_duplicate_registration(client):
