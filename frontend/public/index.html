@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8"/>
-  <title>Campus Clubs & Events — Phase 2 Demo</title>
+  <title>Campus Clubs & Events Portal</title>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <link rel="stylesheet" href="./styles.css">
 </head>
@@ -16,7 +16,7 @@
     </div>
     <div id="top_bar" class="top-bar hidden">
       <div id="user_summary" class="user-summary"></div>
-      <a href="#" id="switch_user_link" class="switch-user" onclick="switchUser(event)">Switch user</a>
+      <a href="#" id="switch_user_link" class="switch-user" onclick="switchUser(event)">Switch User</a>
     </div>
   </header>
 
@@ -78,13 +78,13 @@
             <p class="cluster-label">Details</p>
             <label>Category
               <select id="filter_category">
-                <option value="">Any category</option>
-                <option value="music">music</option>
-                <option value="tech">tech</option>
-                <option value="sports">sports</option>
-                <option value="social">social</option>
-                <option value="career">career</option>
-                <option value="other">other</option>
+                <option value="">Any Category</option>
+                <option value="music">Music</option>
+                <option value="tech">Tech</option>
+                <option value="sports">Sports</option>
+                <option value="social">Social</option>
+                <option value="career">Career</option>
+                <option value="other">Other</option>
               </select>
             </label>
             <label>Title contains <input id="filter_title" placeholder="Workshop, social, meetup"></label>
@@ -103,8 +103,8 @@
         </div>
         <div class="button-row">
           <button type="button" class="btn-primary" onclick="loadEvents()">Search</button>
-          <button type="button" class="btn-secondary" onclick="resetFilters()">Reset filters</button>
-          <button type="button" class="btn-ghost" onclick="loadTrending()">See trending</button>
+          <button type="button" class="btn-secondary" onclick="resetFilters()">Reset Filters</button>
+          <button type="button" class="btn-ghost" onclick="loadTrending()">See Trending</button>
         </div>
       </div>
       <div class="panel">
@@ -135,7 +135,7 @@
     <div class="panel">
       <div class="section-header compact">
         <div>
-          <p class="eyebrow">Now popular</p>
+          <p class="eyebrow">Now Popular</p>
           <h3>Trending Events</h3>
         </div>
         <button type="button" onclick="loadTrending()">Refresh Trending</button>
@@ -150,7 +150,7 @@
       <div>
         <h2>Clubs Directory</h2>
         <div id="clubs_status" class="section-status status" aria-live="polite"></div>
-        <p>Browse campus groups, join a club, or manage your own.</p>
+        <p>Browse campus clubs, join a club, or manage your own.</p>
       </div>
     </div>
     <div class="row card-grid">
@@ -175,9 +175,9 @@
         <p class="hint">Create something new or request membership.</p>
         <label>Name <input id="club_name" placeholder="Board Games"></label>
         <label>Description <textarea id="club_desc" placeholder="What does this club do?"></textarea></label>
-        <button onclick="createClub()">Submit Club (pending approval)</button>
+        <button onclick="createClub()">Submit Club (Pending Approval)</button>
         <div id="club_create_result" class="section-status status" aria-live="polite"></div>
-        <h4>Join a club</h4>
+        <h4>Join a Club</h4>
         <label>Club ID <input type="number" id="join_club_id"></label>
         <button onclick="joinClub()">Request to Join</button>
         <div id="club_join_result" class="section-status status" aria-live="polite"></div>
@@ -187,7 +187,7 @@
     <div class="panel">
       <div class="section-header compact">
         <div>
-          <h3>Club Detail</h3>
+          <h3>Club Details</h3>
           <p class="hint">Inspect a specific club and use leader tools when available.</p>
         </div>
         <div class="button-row inline">
@@ -229,7 +229,7 @@
             <h4>Approve Requests</h4>
             <p class="hint">Review pending join requests for this club.</p>
             <div class="form-grid">
-              <label>Approve member email <input id="approve_email" placeholder="student@example.edu"></label>
+              <label>Approve Member Email <input id="approve_email" placeholder="student@example.edu"></label>
             </div>
             <div class="button-row aligned">
               <button onclick="approveMember()">Approve</button>
@@ -289,7 +289,7 @@
           </div>
           <button onclick="loadMyClubs()">Load My Clubs</button>
         </div>
-        <ul id="my_club_list" class="card-list"><li>Use the login above, then click the button to load.</li></ul>
+        <ul id="my_club_list" class="card-list"><li>Log in above, then load your approved clubs.</li></ul>
       </div>
     </div>
   </section>
@@ -310,7 +310,7 @@
             <h3>Pending Clubs</h3>
             <p class="hint">Review and approve new submissions.</p>
           </div>
-          <button onclick="loadPendingClubs()">Load Pending</button>
+          <button onclick="loadPendingClubs()">Load Pending Clubs</button>
         </div>
         <div class="table-wrapper">
           <table class="admin-table">
@@ -330,7 +330,7 @@
             <h3>Flagged Content</h3>
             <p class="hint">Resolve reports from across the app.</p>
           </div>
-          <button onclick="loadFlags()">Load Flags</button>
+          <button onclick="loadFlags()">Load Flagged Content</button>
         </div>
         <div class="table-wrapper">
           <table class="admin-table">
@@ -520,8 +520,8 @@
     document.getElementById("club_detail").innerHTML = "";
     document.getElementById("pending_club_tbody").innerHTML = '<tr><td colspan="4" class="empty-state">Load pending clubs to review submissions.</td></tr>';
     document.getElementById("flagged_tbody").innerHTML = '<tr><td colspan="6" class="empty-state">Load flagged content to review reports.</td></tr>';
-    document.getElementById("my_events_tbody").innerHTML = '<tr><td colspan="4">Use the login form to load your registrations.</td></tr>';
-    document.getElementById("my_club_list").innerHTML = '<li>Use the login form to load your clubs.</li>';
+    document.getElementById("my_events_tbody").innerHTML = '<tr><td colspan="4">Log in above to load your registrations.</td></tr>';
+    document.getElementById("my_club_list").innerHTML = '<li>Log in above to load your clubs.</li>';
   }
 
   function buildHeaders(json=true){
@@ -720,7 +720,7 @@
       regBtn.onclick = () => isRegistered ? unregisterEvent(ev.id) : registerEvent(ev.id);
       const flagBtn = document.createElement("button");
       flagBtn.classList.add("btn-ghost");
-      flagBtn.textContent = "Flag";
+      flagBtn.textContent = "Flag Content";
       flagBtn.onclick = () => flagEvent(ev.id);
       actions.appendChild(regBtn);
       actions.appendChild(flagBtn);
@@ -757,7 +757,7 @@
       }
       data.forEach(ev => {
         const li = document.createElement("li");
-        li.textContent = `${ev.title} (${ev.registration_count} regs)`;
+        li.textContent = `${ev.title} (${ev.registration_count} registrations)`;
         ul.appendChild(li);
       });
     } catch (err){
@@ -1007,7 +1007,7 @@
     }).join('');
     const announcements = data.announcements.map(a => {
       const date = new Date(a.created_at).toLocaleDateString();
-      return `<li class="announcement-row"><span class="announcement-date">${date}</span> <strong>${a.title}</strong> — ${a.body} <button class="btn-ghost" onclick=\"flagAnnouncement(${a.id})\">Flag</button></li>`;
+      return `<li class="announcement-row"><span class="announcement-date">${date}</span> <strong>${a.title}</strong> — ${a.body} <button class="btn-ghost" onclick=\"flagAnnouncement(${a.id})\">Flag Content</button></li>`;
     }).join('');
     const persona = currentPersona();
     const isClubLeader = data.members.some(m => m.user_email === persona.email && m.role === "leader" && m.status === "approved");
