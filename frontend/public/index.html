@@ -20,6 +20,10 @@
     small{display:block;color:#57606a;margin-top:4px}
     .highlight{background:#fff3cd;transition:background 0.4s ease}
     .clickable-row{cursor:pointer}
+    .hidden{display:none!important}
+    .nav-bar{display:flex;gap:8px;align-items:center;margin:18px 0;flex-wrap:wrap}
+    .nav-button{padding:10px 14px;border:1px solid #d0d7de;border-radius:8px;background:#f6f8fa;cursor:pointer;font:inherit}
+    .nav-button.active{background:#d0ebff;border-color:#84b5ff;font-weight:700}
   </style>
 </head>
 <body>
@@ -50,7 +54,14 @@
     </div>
   </section>
 
-  <section>
+  <nav class="nav-bar">
+    <button type="button" class="nav-button" id="nav-events" data-target="events" onclick="showNavSection('events')">Events</button>
+    <button type="button" class="nav-button" id="nav-clubs" data-target="clubs" onclick="showNavSection('clubs')">Clubs</button>
+    <button type="button" class="nav-button" id="nav-mystuff" data-target="mystuff" onclick="showNavSection('mystuff')">My Stuff</button>
+    <button type="button" class="nav-button admin-only" id="nav-admin" data-target="admin" onclick="showNavSection('admin')">Admin</button>
+  </nav>
+
+  <section data-section-group="events">
     <h2>Discover events</h2>
     <div class="row">
       <div>
@@ -102,7 +113,7 @@
     <ul id="trending_list"></ul>
   </section>
 
-  <section>
+  <section data-section-group="mystuff">
     <h2>My Events</h2>
     <p>See the events this persona is registered for and jump to them in the main list.</p>
     <button onclick="loadMyEvents()">Load my registered events</button>
@@ -114,7 +125,7 @@
     </table>
   </section>
 
-  <section>
+  <section data-section-group="clubs">
     <h2>Clubs directory</h2>
     <div class="row">
       <div>
@@ -134,22 +145,16 @@
         <pre id="club_join_result"></pre>
       </div>
     </div>
-    <div>
-      <h3>My Clubs</h3>
-      <p>Shows clubs where this persona has an approved membership.</p>
-      <button onclick="loadMyClubs()">Load my clubs</button>
-      <ul id="my_club_list"><li>Use the persona headers above, then click the button to load.</li></ul>
-    </div>
   </section>
 
-  <section>
+  <section data-section-group="clubs">
     <h2>Club page</h2>
     <label>Club ID <input type="number" id="club_detail_id" value="1"></label>
     <button onclick="loadClubDetail()">Load club</button>
     <div id="club_detail"></div>
 
     <div class="row">
-      <div>
+      <div class="leader-only">
         <h3>Leader tools</h3>
         <label>Approve member email <input id="approve_email" placeholder="student@example.edu"></label>
         <button onclick="approveMember()">Approve</button>
@@ -158,7 +163,7 @@
         <label>Body <textarea id="ann_body"></textarea></label>
         <button onclick="postAnnouncement()">Publish</button>
       </div>
-      <div>
+      <div class="leader-only">
         <h3>Schedule club event</h3>
         <label>Title <input id="club_event_title" value="Study Session"></label>
         <label>Starts At <input id="club_event_starts"></label>
@@ -171,7 +176,14 @@
     </div>
   </section>
 
-  <section>
+  <section data-section-group="mystuff">
+    <h2>My Clubs</h2>
+    <p>Shows clubs where this persona has an approved membership.</p>
+    <button onclick="loadMyClubs()">Load my clubs</button>
+    <ul id="my_club_list"><li>Use the persona headers above, then click the button to load.</li></ul>
+  </section>
+
+  <section class="admin-only" data-section-group="admin">
     <h2>Admin dashboard</h2>
     <button onclick="loadPendingClubs()">Load pending clubs</button>
     <ul id="pending_club_list"></ul>
@@ -205,6 +217,7 @@
   function setPersona(email, role){
     document.getElementById("persona_email").value = email;
     document.getElementById("persona_role").value = role;
+    updateRoleVisibility();
   }
 
   function buildHeaders(json=true){
@@ -698,11 +711,51 @@
   }
 
   // initial data
+  const sectionGroups = ["events", "clubs", "mystuff", "admin"];
+
+  function showNavSection(target){
+    sectionGroups.forEach(group => {
+      document.querySelectorAll(`[data-section-group="${group}"]`).forEach(section => {
+        section.classList.toggle("hidden", group !== target);
+      });
+    });
+
+    document.querySelectorAll(".nav-button").forEach(btn => {
+      btn.classList.toggle("active", btn.dataset.target === target);
+    });
+  }
+
+  function updateRoleVisibility(){
+    const role = document.getElementById("persona_role").value;
+    document.querySelectorAll(".admin-only").forEach(el => {
+      el.classList.toggle("hidden", role !== "admin");
+    });
+    document.querySelectorAll(".leader-only").forEach(el => {
+      el.classList.toggle("hidden", role === "student");
+    });
+
+    const activeNav = document.querySelector(".nav-button.active")?.dataset.target ?? "events";
+    if(role !== "admin" && activeNav === "admin"){
+      showNavSection("events");
+    }
+  }
+
+  document.getElementById("persona_role").addEventListener("change", () => {
+    updateRoleVisibility();
+  });
+
+  document.getElementById("persona_email").addEventListener("change", () => {
+    // keep UI role-aware when persona changes email only
+    updateRoleVisibility();
+  });
+
   listEvents();
   loadTrending();
   loadClubs();
   loadMyClubs();
   loadClubDetail();
+  updateRoleVisibility();
+  showNavSection("events");
 </script>
 </body>
 </html>
