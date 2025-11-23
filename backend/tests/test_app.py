@@ -333,6 +333,44 @@ def test_join_club_and_approval_flow(client):
         assert membership.status == "approved"
 
 
+def test_my_clubs_and_leave_flow(client):
+    with TestingSessionLocal() as session:
+        club = session.execute(
+            select(models.Club).where(models.Club.approved == True)
+        ).scalar_one()
+        club_id = club.id
+
+    student_headers = auth_headers("member@school.edu", "student")
+    join_resp = client.post(f"/api/clubs/{club_id}/join", headers=student_headers)
+    assert join_resp.status_code == 200
+
+    leader_headers = auth_headers("leader@school.edu", "leader")
+    approve_resp = client.post(
+        f"/api/clubs/{club_id}/members/member@school.edu/approve",
+        headers=leader_headers,
+    )
+    assert approve_resp.status_code == 200
+
+    mine_resp = client.get("/api/clubs/mine", headers=student_headers)
+    assert mine_resp.status_code == 200
+    mine_ids = {club["id"] for club in mine_resp.json()}
+    assert club_id in mine_ids
+
+    list_resp = client.get("/api/clubs", headers=student_headers)
+    club_summary = next(c for c in list_resp.json() if c["id"] == club_id)
+    assert club_summary["membership_status"] == "approved"
+
+    leave_resp = client.post(f"/api/clubs/{club_id}/leave", headers=student_headers)
+    assert leave_resp.status_code == 200
+
+    mine_after = client.get("/api/clubs/mine", headers=student_headers).json()
+    assert club_id not in {club["id"] for club in mine_after}
+
+    list_after = client.get("/api/clubs", headers=student_headers).json()
+    after_status = next(c for c in list_after if c["id"] == club_id)["membership_status"]
+    assert after_status == "removed"
+
+
 def test_flag_creation_listing_and_resolution(client):
     with TestingSessionLocal() as session:
         event = session.execute(select(models.Event)).scalars().first()

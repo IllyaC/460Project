@@ -106,6 +106,7 @@
     <h2>Clubs directory</h2>
     <div class="row">
       <div>
+        <p>Join or leave clubs directly from the list using the buttons below.</p>
         <button onclick="loadClubs()">Refresh clubs</button>
         <ul id="club_list"></ul>
       </div>
@@ -120,6 +121,12 @@
         <button onclick="joinClub()">Request to join</button>
         <pre id="club_join_result"></pre>
       </div>
+    </div>
+    <div>
+      <h3>My Clubs</h3>
+      <p>Shows clubs where this persona has an approved membership.</p>
+      <button onclick="loadMyClubs()">Load my clubs</button>
+      <ul id="my_club_list"><li>Use the persona headers above, then click the button to load.</li></ul>
     </div>
   </section>
 
@@ -170,6 +177,8 @@
   let loadedClubId = null;
   let myRegistrations = new Map();
   let myEvents = [];
+  let clubMemberships = new Map();
+  let myClubs = [];
 
   function isoPlusDays(days){
     const dt = new Date(Date.now() + days * 86400000);
@@ -349,17 +358,71 @@
     await fetchMyRegistrations(true);
   }
 
-  async function loadClubs(){
-    const res = await fetch(`${API}/clubs`);
-    const data = await res.json();
+  function renderClubs(clubs){
     const ul = document.getElementById("club_list");
     ul.innerHTML = "";
-    data.forEach(club => {
+    if(clubs.length === 0){
+      ul.innerHTML = '<li>No clubs found.</li>';
+      return;
+    }
+
+    clubs.forEach(club => {
       const li = document.createElement("li");
       li.innerHTML = `<strong>${club.name}</strong> — ${club.description}<br>` +
                      `Members: ${club.member_count} | Upcoming events: ${club.upcoming_event_count}`;
+      const action = document.createElement("div");
+      const status = clubMemberships.get(club.id);
+      const btn = document.createElement("button");
+      if(status === "approved"){
+        btn.textContent = "Leave";
+        btn.onclick = () => leaveClub(club.id);
+      } else if(status === "pending"){
+        btn.textContent = "Pending";
+        btn.disabled = true;
+      } else {
+        btn.textContent = "Join";
+        btn.onclick = () => joinClub(club.id);
+      }
+      action.appendChild(btn);
+      li.appendChild(action);
       ul.appendChild(li);
     });
+  }
+
+  async function loadClubs(){
+    const res = await fetch(`${API}/clubs`, { headers: buildHeaders(false) });
+    const data = await res.json();
+    clubMemberships = new Map(data.map(club => [club.id, club.membership_status]));
+    renderClubs(data);
+  }
+
+  function renderMyClubs(){
+    const ul = document.getElementById("my_club_list");
+    ul.innerHTML = "";
+    if(myClubs.length === 0){
+      ul.innerHTML = '<li>No approved club memberships for this persona yet.</li>';
+      return;
+    }
+    myClubs.forEach(club => {
+      const li = document.createElement("li");
+      li.textContent = `${club.name} — ${club.description}`;
+      ul.appendChild(li);
+    });
+  }
+
+  async function loadMyClubs(){
+    try {
+      const res = await fetch(`${API}/clubs/mine`, { headers: buildHeaders(false) });
+      if(!res.ok){
+        myClubs = [];
+      } else {
+        myClubs = await res.json();
+      }
+    } catch (err){
+      console.error("Failed to load my clubs", err);
+      myClubs = [];
+    }
+    renderMyClubs();
   }
 
   async function createClub(){
@@ -376,28 +439,55 @@
     loadPendingClubs();
   }
 
-  async function joinClub(){
-    const id = Number(document.getElementById("join_club_id").value);
-    const res = await fetch(`${API}/clubs/${id}/join`, {
+  async function joinClub(id){
+    const clubId = id ?? Number(document.getElementById("join_club_id").value);
+    if(!clubId){ return; }
+    const res = await fetch(`${API}/clubs/${clubId}/join`, {
       method: "POST",
       headers: buildHeaders(true)
     });
-    document.getElementById("club_join_result").textContent = JSON.stringify(await res.json(), null, 2);
+    const body = await res.json();
+    document.getElementById("club_join_result").textContent = JSON.stringify(body, null, 2);
+    alert(`Join request: ${res.status}`);
+    await loadClubs();
+    await loadMyClubs();
+  }
+
+  async function leaveClub(id){
+    if(!id){ return; }
+    const res = await fetch(`${API}/clubs/${id}/leave`, {
+      method: "POST",
+      headers: buildHeaders(true)
+    });
+    const body = await res.json();
+    document.getElementById("club_join_result").textContent = JSON.stringify(body, null, 2);
+    alert(res.ok ? "Left club" : `Leave failed: ${res.status}`);
+    await loadClubs();
+    await loadMyClubs();
   }
 
   async function loadClubDetail(){
     const id = Number(document.getElementById("club_detail_id").value);
     if(!id){ return; }
-    const res = await fetch(`${API}/clubs/${id}`);
+    const res = await fetch(`${API}/clubs/${id}`, { headers: buildHeaders(false) });
     const data = await res.json();
     loadedClubId = id;
     const div = document.getElementById("club_detail");
-    const members = data.members.map(m => `${m.user_email} (${m.role})`).join(', ') || '—';
+    const members = data.members.map(m => `${m.user_email} (${m.role}, ${m.status})`).join(', ') || '—';
     const announcements = data.announcements.map(a => `<li><strong>${a.title}</strong> — ${a.body} <button onclick=\"flagAnnouncement(${a.id})\">Flag</button></li>`).join('');
     const events = data.events.map(ev => `<li>${ev.title} (${new Date(ev.starts_at).toLocaleDateString()}) cap ${ev.capacity} regs ${ev.registration_count}</li>`).join('');
+    const pendingMembers = data.members.filter(m => m.status === "pending");
+    const role = document.getElementById("persona_role").value;
+    const pendingList = pendingMembers.length
+      ? pendingMembers.map(m => `<li>${m.user_email} (${m.role}) <button onclick=\"approveMember('${m.user_email}')\">Approve</button></li>`).join('')
+      : '<li>No pending requests</li>';
+    const pendingSection = ["leader", "admin"].includes(role)
+      ? `<div><h4>Pending members</h4><ul>${pendingList}</ul></div>`
+      : '';
     div.innerHTML = `
       <h3>${data.club.name} ${data.club.approved ? '' : '(pending)'}</h3>
       <p>${data.club.description}</p>
+      ${pendingSection}
       <p><strong>Members:</strong> ${members}</p>
       <div>
         <h4>Announcements</h4>
@@ -410,9 +500,9 @@
     `;
   }
 
-  async function approveMember(){
+  async function approveMember(emailOverride){
     if(!loadedClubId){ alert('Load a club first'); return; }
-    const email = document.getElementById("approve_email").value;
+    const email = emailOverride ?? document.getElementById("approve_email").value;
     const res = await fetch(`${API}/clubs/${loadedClubId}/members/${encodeURIComponent(email)}/approve`, {
       method: "POST",
       headers: buildHeaders(true)
@@ -538,6 +628,7 @@
   listEvents();
   loadTrending();
   loadClubs();
+  loadMyClubs();
   loadClubDetail();
 </script>
 </body>
