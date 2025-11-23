@@ -221,6 +221,55 @@ section {
   margin-top: 16px;
 }
 
+.leader-dashboard {
+  margin-top: 18px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.leader-dashboard__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.leader-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.form-grid label {
+  margin-top: 0;
+}
+
+.button-row.aligned {
+  justify-content: flex-start;
+  margin-top: 12px;
+}
+
+.slim-list {
+  margin-top: 10px;
+}
+
+.slim-list li {
+  padding: 10px 12px;
+}
+
+.leader-card .member-row {
+  justify-content: space-between;
+}
+
+.leader-card .member-row button {
+  margin-top: 0;
+}
+
 label {
   display: block;
   margin-top: 10px;
