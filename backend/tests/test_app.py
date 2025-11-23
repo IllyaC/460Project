@@ -67,6 +67,82 @@ def client():
         yield c
 
 
+def test_register_student_and_leader(client):
+    student_resp = client.post(
+        "/api/auth/register",
+        json={
+            "username": "freshstudent",
+            "email": "freshstudent@school.edu",
+            "password": "password123",
+            "desired_role": "student",
+        },
+    )
+    assert student_resp.status_code == 200
+    student = student_resp.json()
+    assert student["role"] == "student"
+    assert student["is_approved"] is True
+
+    leader_resp = client.post(
+        "/api/auth/register",
+        json={
+            "username": "futureleader",
+            "email": "futureleader@school.edu",
+            "password": "password123",
+            "desired_role": "leader",
+        },
+    )
+    assert leader_resp.status_code == 200
+    leader = leader_resp.json()
+    assert leader["role"] == "leader"
+    assert leader["is_approved"] is False
+
+
+def test_login_success_and_failure(client):
+    register_resp = client.post(
+        "/api/auth/register",
+        json={
+            "username": "loginuser",
+            "email": "loginuser@school.edu",
+            "password": "secretpass",
+            "desired_role": "student",
+        },
+    )
+    assert register_resp.status_code == 200
+
+    success_resp = client.post(
+        "/api/auth/login",
+        json={"username_or_email": "loginuser@school.edu", "password": "secretpass"},
+    )
+    assert success_resp.status_code == 200
+    assert success_resp.json()["email"] == "loginuser@school.edu"
+
+    failure_resp = client.post(
+        "/api/auth/login",
+        json={"username_or_email": "loginuser", "password": "wrongpass"},
+    )
+    assert failure_resp.status_code == 401
+
+
+def test_unapproved_leader_blocked_from_leader_actions(client):
+    leader_resp = client.post(
+        "/api/auth/register",
+        json={
+            "username": "pendingleader",
+            "email": "pendingleader@school.edu",
+            "password": "password123",
+            "desired_role": "leader",
+        },
+    )
+    assert leader_resp.status_code == 200
+
+    headers = auth_headers("pendingleader@school.edu", "leader")
+    create_resp = client.post(
+        "/api/clubs",
+        json={"name": "Pending Club", "description": "awaiting approval"},
+        headers=headers,
+    )
+    assert create_resp.status_code == 403
+
 def test_list_events_basic(client):
     response = client.get("/api/events", headers=auth_headers("student1@school.edu", "student"))
     assert response.status_code == 200

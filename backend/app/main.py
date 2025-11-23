@@ -7,10 +7,11 @@ from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 from dotenv import load_dotenv
 
-from .api import admin, clubs, events, flags
+from .api import admin, auth, clubs, events, flags
+from .auth_utils import hash_password
 from .db import Base, engine, get_session
 from .deps import get_db, get_user
-from .models import Club, ClubAnnouncement, ClubMember, Event, Registration
+from .models import Club, ClubAnnouncement, ClubMember, Event, Registration, User
 
 # Load .env
 load_dotenv()
@@ -34,7 +35,94 @@ def startup() -> None:
         seed_data(session)
 
 
+def ensure_user(
+    session: Session,
+    username: str,
+    email: str,
+    role: str = "student",
+    is_approved: bool = True,
+    password: str = "password123",
+) -> User:
+    normalized_email = email.lower()
+    existing = session.execute(select(User).where(User.email == normalized_email)).scalar_one_or_none()
+    if existing:
+        return existing
+    base_username = username
+    candidate_username = base_username
+    suffix = 1
+    while session.execute(select(User).where(User.username == candidate_username)).scalar_one_or_none():
+        candidate_username = f"{base_username}{suffix}"
+        suffix += 1
+    user = User(
+        username=candidate_username,
+        email=normalized_email,
+        password_hash=hash_password(password),
+        role=role,
+        is_approved=is_approved,
+    )
+    session.add(user)
+    session.flush()
+    return user
+
+
 def seed_data(session: Session) -> None:
+    ensure_user(
+        session,
+        username="admin",
+        email="admin@school.edu",
+        role="admin",
+        is_approved=True,
+        password="admin123",
+    )
+
+    leader_emails = {
+        "leader@school.edu",
+        "newleader@school.edu",
+        "musiclead@school.edu",
+        "traillead@school.edu",
+        "careercoach@school.edu",
+        "servicelead@school.edu",
+        "artlead@school.edu",
+        "foodlead@school.edu",
+        "esportslead@school.edu",
+        "wellnesslead@school.edu",
+        "makerlead@school.edu",
+    }
+    for email in leader_emails:
+        ensure_user(
+            session,
+            username=email.split("@")[0],
+            email=email,
+            role="leader",
+            is_approved=True,
+        )
+
+    student_emails = {
+        "student1@school.edu",
+        "student@school.edu",
+        "studenta@school.edu",
+        "studentb@school.edu",
+        "reggie@school.edu",
+        "learner@school.edu",
+        "one@school.edu",
+        "two@school.edu",
+        "self@school.edu",
+        "joiner@school.edu",
+        "member@school.edu",
+        "flagger@school.edu",
+        "studentA@school.edu",
+        "studentB@school.edu",
+        "student@example.edu",
+    }
+    for email in student_emails:
+        ensure_user(
+            session,
+            username=email.split("@")[0],
+            email=email,
+            role="student",
+            is_approved=True,
+        )
+
     existing_clubs = session.execute(select(func.count(Club.id))).scalar_one()
     existing_events = session.execute(select(func.count(Event.id))).scalar_one()
     if existing_clubs > 0 or existing_events > 0:
@@ -521,6 +609,7 @@ def seed_data(session: Session) -> None:
             registration_counter += 1
 
 
+app.include_router(auth.router)
 app.include_router(events.router)
 app.include_router(clubs.router)
 app.include_router(admin.router)

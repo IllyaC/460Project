@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from ..deps import get_db, get_user, UserContext
-from ..models import Flag
+from ..deps import get_db, get_user
+from ..models import Flag, User
 from ..schemas import FlagCreate, FlagOut
 from ..services import serialize_flag
 
@@ -13,7 +13,7 @@ router = APIRouter()
 def create_flag(
     payload: FlagCreate,
     db: Session = Depends(get_db),
-    user: UserContext = Depends(get_user),
+    user: User = Depends(get_user),
 ):
     item_type = payload.item_type.lower()
     if item_type not in {"event", "announcement"}:

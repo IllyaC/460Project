@@ -5,8 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
-from ..deps import ensure_admin, ensure_leader, get_db, get_user, UserContext
-from ..models import Event, Registration
+from ..deps import ensure_admin, ensure_leader, get_db, get_user
+from ..models import Event, Registration, User
 from ..schemas import EventCreate, EventOut, RegistrationCreate, RegistrationOut
 from ..services import base_event_query, serialize_event
 
@@ -17,7 +17,7 @@ router = APIRouter()
 def create_event(
     payload: EventCreate,
     db: Session = Depends(get_db),
-    user: UserContext = Depends(get_user),
+    user: User = Depends(get_user),
 ):
     if payload.club_id:
         ensure_leader(db, payload.club_id, user)
@@ -78,7 +78,7 @@ def trending_events(limit: int = 5, db: Session = Depends(get_db)):
 def delete_event(
     event_id: int,
     db: Session = Depends(get_db),
-    user: UserContext = Depends(get_user),
+    user: User = Depends(get_user),
 ):
     event = db.get(Event, event_id)
     if not event:
@@ -98,7 +98,7 @@ def delete_event(
 def register(
     payload: RegistrationCreate,
     db: Session = Depends(get_db),
-    user: UserContext = Depends(get_user),
+    user: User = Depends(get_user),
 ):
     event = db.get(Event, payload.event_id)
     if not event:
@@ -137,7 +137,7 @@ def register(
 def unregister(
     event_id: int,
     db: Session = Depends(get_db),
-    user: UserContext = Depends(get_user),
+    user: User = Depends(get_user),
 ):
     registration = db.execute(
         select(Registration).where(
@@ -155,7 +155,7 @@ def unregister(
 @router.get("/api/registrations/mine", response_model=list[RegistrationOut])
 def my_registrations(
     db: Session = Depends(get_db),
-    user: UserContext = Depends(get_user),
+    user: User = Depends(get_user),
 ):
     registrations = (
         db.execute(

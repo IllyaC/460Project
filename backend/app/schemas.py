@@ -4,6 +4,35 @@ from typing import Optional
 from pydantic import BaseModel, field_validator
 
 
+class UserOut(BaseModel):
+    id: int
+    username: str
+    email: str
+    role: str
+    is_approved: bool
+    created_at: datetime
+
+
+class RegisterRequest(BaseModel):
+    username: str
+    email: str
+    password: str
+    desired_role: str = "student"
+
+    @field_validator("desired_role")
+    @classmethod
+    def validate_role(cls, value: str):
+        normalized = value.lower()
+        if normalized not in {"student", "leader"}:
+            raise ValueError("desired_role must be student or leader")
+        return normalized
+
+
+class LoginRequest(BaseModel):
+    username_or_email: str
+    password: str
+
+
 class EventCreate(BaseModel):
     title: str
     starts_at: datetime

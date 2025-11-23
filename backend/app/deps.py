@@ -1,27 +1,10 @@
-from typing import Literal
-
+from fastapi import Depends, Header, HTTPException
 from fastapi import Depends, Header, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .db import get_session
-from .models import ClubMember
-
-
-class UserContext:
-    def __init__(self, email: str, role: Literal["student", "leader", "admin"]):
-        self.email = email
-        self.role = role
-
-
-def get_user(
-    x_user_email: str = Header(default="student@example.edu"),
-    x_user_role: str = Header(default="student"),
-) -> UserContext:
-    role = x_user_role.lower()
-    if role not in {"student", "leader", "admin"}:
-        raise HTTPException(status_code=400, detail="X-User-Role must be student, leader, or admin")
-    return UserContext(email=x_user_email, role=role)
+from .models import ClubMember, User
 
 
 def get_db():
@@ -29,11 +12,31 @@ def get_db():
         yield session
 
 
-def ensure_leader(db: Session, club_id: int, user: UserContext) -> None:
-    if user.role not in {"leader", "admin"}:
-        raise HTTPException(status_code=403, detail="Leader access required")
+def get_user(
+    x_user_id: int | None = Header(default=None),
+    x_user_email: str | None = Header(default=None),
+    db: Session = Depends(get_db),
+) -> User:
+    if not x_user_id and not x_user_email:
+        raise HTTPException(status_code=401, detail="User header missing")
+
+    query = select(User)
+    if x_user_id:
+        query = query.where(User.id == x_user_id)
+    elif x_user_email:
+        query = query.where(User.email == x_user_email.lower())
+
+    user = db.execute(query).scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+    return user
+
+
+def ensure_leader(db: Session, club_id: int, user: User) -> None:
     if user.role == "admin":
         return
+    if user.role != "leader" or not user.is_approved:
+        raise HTTPException(status_code=403, detail="Leader approval required")
     membership = db.execute(
         select(ClubMember).where(
             ClubMember.club_id == club_id,
@@ -46,11 +49,13 @@ def ensure_leader(db: Session, club_id: int, user: UserContext) -> None:
         raise HTTPException(status_code=403, detail="Leader access required for this club")
 
 
-def ensure_admin(user: UserContext) -> None:
+def ensure_admin(user: User) -> None:
     if user.role != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
 
 
-def ensure_leader_role(user: UserContext) -> None:
-    if user.role not in {"leader", "admin"}:
-        raise HTTPException(status_code=403, detail="Leader access required")
+def ensure_leader_role(user: User) -> None:
+    if user.role == "admin":
+        return
+    if user.role != "leader" or not user.is_approved:
+        raise HTTPException(status_code=403, detail="Leader approval required")

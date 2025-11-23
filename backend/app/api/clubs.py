@@ -4,8 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ..deps import ensure_leader, ensure_leader_role, get_db, get_user, UserContext
-from ..models import Club, ClubAnnouncement, ClubMember, Event
+from ..deps import ensure_leader, ensure_leader_role, get_db, get_user
+from ..models import Club, ClubAnnouncement, ClubMember, Event, User
 from ..schemas import AnnouncementCreate, AnnouncementOut, ClubCreate, ClubDetail, ClubSummary, EventCreate, EventOut
 from ..services import club_detail, club_summary, serialize_event
 
@@ -16,7 +16,7 @@ router = APIRouter()
 def create_club(
     payload: ClubCreate,
     db: Session = Depends(get_db),
-    user: UserContext = Depends(get_user),
+    user: User = Depends(get_user),
 ):
     ensure_leader_role(user)
     club = Club(
@@ -39,13 +39,13 @@ def create_club(
 
 
 @router.get("/api/clubs", response_model=list[ClubSummary])
-def list_clubs(db: Session = Depends(get_db), user: UserContext = Depends(get_user)):
+def list_clubs(db: Session = Depends(get_db), user: User = Depends(get_user)):
     clubs = db.execute(select(Club).order_by(Club.name.asc())).scalars().all()
     return [club_summary(db, club, user.email) for club in clubs]
 
 
 @router.get("/api/clubs/mine", response_model=list[ClubSummary])
-def my_clubs(db: Session = Depends(get_db), user: UserContext = Depends(get_user)):
+def my_clubs(db: Session = Depends(get_db), user: User = Depends(get_user)):
     memberships = (
         db.execute(
             select(ClubMember).where(
@@ -70,7 +70,7 @@ def my_clubs(db: Session = Depends(get_db), user: UserContext = Depends(get_user
 
 @router.get("/api/clubs/{club_id}", response_model=ClubDetail)
 def get_club(
-    club_id: int, db: Session = Depends(get_db), user: UserContext = Depends(get_user)
+    club_id: int, db: Session = Depends(get_db), user: User = Depends(get_user)
 ):
     club = db.get(Club, club_id)
     if not club:
@@ -82,7 +82,7 @@ def get_club(
 def join_club(
     club_id: int,
     db: Session = Depends(get_db),
-    user: UserContext = Depends(get_user),
+    user: User = Depends(get_user),
 ):
     club = db.get(Club, club_id)
     if not club or not club.approved:
@@ -114,7 +114,7 @@ def join_club(
 def leave_club(
     club_id: int,
     db: Session = Depends(get_db),
-    user: UserContext = Depends(get_user),
+    user: User = Depends(get_user),
 ):
     club = db.get(Club, club_id)
     if not club:
@@ -139,7 +139,7 @@ def approve_member(
     club_id: int,
     member_email: str,
     db: Session = Depends(get_db),
-    user: UserContext = Depends(get_user),
+    user: User = Depends(get_user),
 ):
     ensure_leader(db, club_id, user)
     membership = db.execute(
@@ -159,7 +159,7 @@ def create_announcement(
     club_id: int,
     payload: AnnouncementCreate,
     db: Session = Depends(get_db),
-    user: UserContext = Depends(get_user),
+    user: User = Depends(get_user),
 ):
     ensure_leader(db, club_id, user)
     club = db.get(Club, club_id)
@@ -186,7 +186,7 @@ def create_club_event(
     club_id: int,
     payload: EventCreate,
     db: Session = Depends(get_db),
-    user: UserContext = Depends(get_user),
+    user: User = Depends(get_user),
 ):
     ensure_leader(db, club_id, user)
     club = db.get(Club, club_id)
