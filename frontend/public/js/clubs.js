@@ -12,6 +12,8 @@ function buildJoinClubMessage(res, body){
   return { message: "We couldn’t process your join request right now.", type: "error" };
 }
 
+let createClubSubmitting = false;
+
 function renderClubs(clubs){
   const ul = document.getElementById("club_list");
   ul.innerHTML = "";
@@ -117,18 +119,56 @@ async function loadMyClubs(){
 }
 
 async function createClub(){
-  const payload = {
-    name: document.getElementById("club_name").value,
-    description: document.getElementById("club_desc").value
-  };
-  const res = await apiCreateClub(payload);
-  const clubMessage = res.ok
-    ? { message: "Your club was submitted and is awaiting review.", type: "success" }
-    : { message: "Unable to submit club right now.", type: "error" };
-  showStatus("clubs_status", clubMessage.message, clubMessage.type);
-  showStatus("club_create_result", clubMessage.message, clubMessage.type);
-  if(personaRole === "admin"){
-    loadPendingClubs();
+  if(createClubSubmitting){ return; }
+  const nameInput = document.getElementById("club_name");
+  const descInput = document.getElementById("club_desc");
+  const submitBtn = document.getElementById("club_submit_btn");
+  const name = nameInput?.value.trim() ?? "";
+  const description = descInput?.value.trim() ?? "";
+  if(!name || !description){
+    const message = "Name and description are required to create a club.";
+    showStatus("clubs_status", message, "error");
+    showStatus("club_create_result", message, "error");
+    return;
+  }
+
+  createClubSubmitting = true;
+  const defaultLabel = submitBtn?.textContent;
+  if(submitBtn){
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Submitting…";
+  }
+  showStatus("clubs_status", "Submitting club for approval...", "info");
+  showStatus("club_create_result", "Submitting club for approval...", "info");
+
+  try {
+    const res = await apiCreateClub({ name, description });
+    const body = await readJson(res);
+    if(res.ok){
+      const successMessage = "Club submitted for approval. An admin will review it shortly.";
+      showStatus("clubs_status", successMessage, "success");
+      showStatus("club_create_result", successMessage, "success");
+      if(nameInput){ nameInput.value = ""; }
+      if(descInput){ descInput.value = ""; }
+      await loadClubs();
+      if(personaRole === "admin"){
+        await loadPendingClubs();
+      }
+    } else {
+      const errorMessage = `We couldn't submit your club: ${buildErrorMessage(res, body)}`;
+      showStatus("clubs_status", errorMessage, "error");
+      showStatus("club_create_result", errorMessage, "error");
+    }
+  } catch (err){
+    const message = "We couldn't submit your club right now. Please try again.";
+    showStatus("clubs_status", message, "error");
+    showStatus("club_create_result", message, "error");
+  } finally {
+    if(submitBtn){
+      submitBtn.disabled = false;
+      submitBtn.textContent = defaultLabel ?? "Submit Club (Pending Approval)";
+    }
+    createClubSubmitting = false;
   }
 }
 
