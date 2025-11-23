@@ -219,6 +219,7 @@ def list_events(
     start: datetime | None = None,
     end: datetime | None = None,
     category: str | None = None,
+    title: str | None = None,
     location: str | None = None,
     free_only: bool | None = None,
     sort: Literal["date", "popularity"] = "date",
@@ -231,6 +232,8 @@ def list_events(
         stmt = stmt.where(Event.starts_at <= end)
     if category:
         stmt = stmt.where(Event.category == category)
+    if title:
+        stmt = stmt.where(func.lower(Event.title).like(f"%{title.lower()}%"))
     if location:
         stmt = stmt.where(func.lower(Event.location).like(f"%{location.lower()}%"))
     if free_only:

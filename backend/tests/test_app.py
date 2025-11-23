@@ -139,6 +139,43 @@ def test_event_filters_and_trending(client):
         assert trending[0]["starts_at"] <= trending[1]["starts_at"]
 
 
+def test_event_filter_by_title(client):
+    admin_headers = auth_headers("admin@school.edu", "admin")
+    start_time = datetime.utcnow() + timedelta(days=6)
+    jam_event = {
+        "title": "Coding Jam Session",
+        "starts_at": (start_time).isoformat(),
+        "location": "Lab 3",
+        "capacity": 20,
+        "price_cents": 0,
+        "category": "tech",
+        "club_id": None,
+    }
+    other_event = {
+        "title": "Career Expo",
+        "starts_at": (start_time + timedelta(hours=2)).isoformat(),
+        "location": "Hall A",
+        "capacity": 50,
+        "price_cents": 0,
+        "category": "career",
+        "club_id": None,
+    }
+
+    for payload in (jam_event, other_event):
+        create_resp = client.post("/api/events", json=payload, headers=admin_headers)
+        assert create_resp.status_code == 200
+
+    filter_resp = client.get(
+        "/api/events",
+        params={"title": "jam"},
+        headers=auth_headers("student@school.edu", "student"),
+    )
+    assert filter_resp.status_code == 200
+    results = filter_resp.json()
+    assert results
+    assert all("jam" in event["title"].lower() for event in results)
+
+
 def test_leader_can_delete_owned_club_event(client):
     club_id = get_club_id_by_name("AI Club")
     leader_headers = auth_headers("leader@school.edu", "leader")
