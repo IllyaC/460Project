@@ -7,12 +7,17 @@
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
-  <div id="top_bar" class="top-bar hidden">
-    <div id="user_summary" class="user-summary"></div>
-    <a href="#" id="switch_user_link" class="switch-user" onclick="switchUser(event)">Switch user</a>
-  </div>
-
-  <h1>Campus Clubs & Events</h1>
+  <header class="page-hero">
+    <div>
+      <p class="eyebrow">Campus Life</p>
+      <h1>Campus Clubs & Events</h1>
+      <p class="lead">Discover events, find your people, and keep campus life organized.</p>
+    </div>
+    <div id="top_bar" class="top-bar hidden">
+      <div id="user_summary" class="user-summary"></div>
+      <a href="#" id="switch_user_link" class="switch-user" onclick="switchUser(event)">Switch user</a>
+    </div>
+  </header>
 
   <section id="login_section">
     <h2>Login</h2>
@@ -43,11 +48,19 @@
     <button type="button" class="nav-button admin-only" id="nav-admin" data-target="admin" onclick="showNavSection('admin')">Admin</button>
   </nav>
 
-  <section data-section-group="events">
-    <h2>Discover events</h2>
-    <p id="events_status" class="status" aria-live="polite"></p>
-    <div class="row">
+  <section data-section-group="events" class="content-section">
+    <div class="section-header">
+      <p class="eyebrow">Events</p>
       <div>
+        <h2>Discover Events</h2>
+        <p id="events_status" class="status" aria-live="polite"></p>
+        <p>Search for something to attend, or add something new to the calendar.</p>
+      </div>
+    </div>
+    <div class="row card-grid">
+      <div class="panel">
+        <h3>Search & Filter</h3>
+        <p class="hint">Dial in the dates, categories, and location to find the right fit.</p>
         <label>Starts after <input id="filter_start" placeholder="2024-09-01T00:00:00Z"></label>
         <label>Ends before <input id="filter_end" placeholder="2024-09-30T23:59:59Z"></label>
         <label>Category
@@ -70,12 +83,15 @@
           </select>
         </label>
         <label><input type="checkbox" id="filter_free"> Free events only</label>
-        <button onclick="loadEvents()">Run search</button>
-        <button type="button" onclick="resetFilters()">Reset filters</button>
-        <button onclick="loadTrending()">Trending</button>
+        <div class="button-row">
+          <button onclick="loadEvents()">Run Search</button>
+          <button type="button" onclick="resetFilters()">Reset Filters</button>
+          <button onclick="loadTrending()">Trending</button>
+        </div>
       </div>
-      <div>
-        <h3>Create event</h3>
+      <div class="panel">
+        <h3>Create Event</h3>
+        <p class="hint">Share a meetup, workshop, or social and put it on the radar.</p>
         <label>Title <input id="event_title" value="Hack Night"></label>
         <label>Starts At <input id="event_starts"></label>
         <label>Location <input id="event_location" value="Student Union"></label>
@@ -83,102 +99,177 @@
         <label>Price (cents) <input type="number" id="event_price" value="0"></label>
         <label>Category <input id="event_category" value="tech"></label>
         <label>Club ID (optional) <input type="number" id="event_club"></label>
-        <button onclick="createEvent()">Create</button>
+        <div class="button-row">
+          <button onclick="createEvent()">Create Event</button>
+        </div>
       </div>
     </div>
-    <table>
-      <thead>
-        <tr><th>ID</th><th>Title</th><th>When</th><th>Location</th><th>Category</th><th>Club</th><th>Capacity</th><th>Registered</th><th></th></tr>
-      </thead>
-      <tbody id="events_tbody"></tbody>
-    </table>
-    <h3>Trending</h3>
-    <ul id="trending_list" class="card-list compact-list"></ul>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>ID</th><th>Title</th><th>When</th><th>Location</th><th>Category</th><th>Club</th><th>Capacity</th><th>Registered</th><th></th></tr>
+        </thead>
+        <tbody id="events_tbody"></tbody>
+      </table>
+    </div>
+    <div class="panel">
+      <div class="section-header compact">
+        <div>
+          <p class="eyebrow">Now popular</p>
+          <h3>Trending Events</h3>
+        </div>
+        <button type="button" onclick="loadTrending()">Refresh Trending</button>
+      </div>
+      <ul id="trending_list" class="card-list compact-list"></ul>
+    </div>
   </section>
 
-  <section data-section-group="mystuff">
-    <h2>My Events</h2>
-    <p>See the events this user is registered for and jump to them in the main list.</p>
-    <button onclick="loadMyEvents()">Load my registered events</button>
-    <table>
-      <thead>
-        <tr><th>Title</th><th>When</th><th>Location</th><th>Category</th></tr>
-      </thead>
-      <tbody id="my_events_tbody"><tr><td colspan="4">Click the button above to load your registrations.</td></tr></tbody>
-    </table>
-  </section>
-
-  <section data-section-group="clubs">
-    <h2>Clubs directory</h2>
-    <p id="clubs_status" class="status" aria-live="polite"></p>
-    <div class="row">
+  <section data-section-group="clubs" class="content-section">
+    <div class="section-header">
+      <p class="eyebrow">Clubs</p>
       <div>
-        <p>Join or leave clubs directly from the list using the buttons below.</p>
-        <button onclick="loadClubs()">Refresh clubs</button>
+        <h2>Clubs Directory</h2>
+        <p id="clubs_status" class="status" aria-live="polite"></p>
+        <p>Browse campus groups, join a club, or manage your own.</p>
+      </div>
+    </div>
+    <div class="row card-grid">
+      <div class="panel">
+        <div class="section-header compact">
+          <div>
+            <h3>Clubs Directory</h3>
+            <p class="hint">Join or leave clubs straight from the list.</p>
+          </div>
+          <button onclick="loadClubs()">Refresh Clubs</button>
+        </div>
         <ul id="club_list" class="card-list"></ul>
       </div>
-      <div>
-        <h3>Create a club</h3>
+      <div class="panel">
+        <h3>Start or Join a Club</h3>
+        <p class="hint">Create something new or request membership.</p>
         <label>Name <input id="club_name" placeholder="Board Games"></label>
         <label>Description <textarea id="club_desc" placeholder="What does this club do?"></textarea></label>
-        <button onclick="createClub()">Submit club (pending approval)</button>
+        <button onclick="createClub()">Submit Club (pending approval)</button>
         <pre id="club_create_result"></pre>
-        <h3>Join a club</h3>
+        <h4>Join a club</h4>
         <label>Club ID <input type="number" id="join_club_id"></label>
-        <button onclick="joinClub()">Request to join</button>
+        <button onclick="joinClub()">Request to Join</button>
         <pre id="club_join_result"></pre>
       </div>
     </div>
-  </section>
 
-  <section data-section-group="clubs">
-    <h2>Club page</h2>
-    <p id="club_detail_status" class="status" aria-live="polite"></p>
-    <label>Club ID <input type="number" id="club_detail_id" value="1"></label>
-    <button onclick="loadClubDetail()">Load club</button>
-    <div id="club_detail"></div>
-
-    <div class="row">
-      <div class="leader-only">
-        <h3>Leader tools</h3>
-        <label>Approve member email <input id="approve_email" placeholder="student@example.edu"></label>
-        <button onclick="approveMember()">Approve</button>
-        <h4>Post announcement</h4>
-        <label>Title <input id="ann_title"></label>
-        <label>Body <textarea id="ann_body"></textarea></label>
-        <button onclick="postAnnouncement()">Publish</button>
+    <div class="panel">
+      <div class="section-header compact">
+        <div>
+          <h3>Club Detail</h3>
+          <p class="hint">Inspect a specific club and use leader tools when available.</p>
+        </div>
+        <div class="button-row inline">
+          <label>Club ID <input type="number" id="club_detail_id" value="1"></label>
+          <button onclick="loadClubDetail()">Load Club</button>
+        </div>
       </div>
-      <div class="leader-only">
-        <h3>Schedule club event</h3>
-        <label>Title <input id="club_event_title" value="Study Session"></label>
-        <label>Starts At <input id="club_event_starts"></label>
-        <label>Location <input id="club_event_location" value="Library 201"></label>
-        <label>Capacity <input type="number" id="club_event_capacity" value="10"></label>
-        <label>Price (cents) <input type="number" id="club_event_price" value="0"></label>
-        <label>Category <input id="club_event_category" value="community"></label>
-        <button onclick="createClubEvent()">Create</button>
+      <p id="club_detail_status" class="status" aria-live="polite"></p>
+      <div id="club_detail"></div>
+
+      <div class="row leader-tools">
+        <div class="leader-only panel inset">
+          <h4>Leader Tools</h4>
+          <label>Approve member email <input id="approve_email" placeholder="student@example.edu"></label>
+          <button onclick="approveMember()">Approve</button>
+          <h4>Post announcement</h4>
+          <label>Title <input id="ann_title"></label>
+          <label>Body <textarea id="ann_body"></textarea></label>
+          <button onclick="postAnnouncement()">Publish</button>
+        </div>
+        <div class="leader-only panel inset">
+          <h4>Schedule Club Event</h4>
+          <label>Title <input id="club_event_title" value="Study Session"></label>
+          <label>Starts At <input id="club_event_starts"></label>
+          <label>Location <input id="club_event_location" value="Library 201"></label>
+          <label>Capacity <input type="number" id="club_event_capacity" value="10"></label>
+          <label>Price (cents) <input type="number" id="club_event_price" value="0"></label>
+          <label>Category <input id="club_event_category" value="community"></label>
+          <button onclick="createClubEvent()">Create</button>
+        </div>
       </div>
     </div>
   </section>
 
-  <section data-section-group="mystuff">
-    <h2>My Clubs</h2>
-    <p>Shows clubs where this user has an approved membership.</p>
-    <button onclick="loadMyClubs()">Load my clubs</button>
-    <ul id="my_club_list" class="card-list"><li>Use the login above, then click the button to load.</li></ul>
+  <section data-section-group="mystuff" class="content-section">
+    <div class="section-header">
+      <p class="eyebrow">My Stuff</p>
+      <div>
+        <h2>Your Hub</h2>
+        <p>Quickly jump to your registered events and club memberships.</p>
+      </div>
+    </div>
+    <div class="row card-grid">
+      <div class="panel">
+        <div class="section-header compact">
+          <div>
+            <h3>My Events</h3>
+            <p class="hint">See everything you have signed up for.</p>
+          </div>
+          <button onclick="loadMyEvents()">Load My Events</button>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr><th>Title</th><th>When</th><th>Location</th><th>Category</th></tr>
+            </thead>
+            <tbody id="my_events_tbody"><tr><td colspan="4">Click the button above to load your registrations.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="section-header compact">
+          <div>
+            <h3>My Clubs</h3>
+            <p class="hint">Clubs where you are already approved.</p>
+          </div>
+          <button onclick="loadMyClubs()">Load My Clubs</button>
+        </div>
+        <ul id="my_club_list" class="card-list"><li>Use the login above, then click the button to load.</li></ul>
+      </div>
+    </div>
   </section>
 
-  <section class="admin-only" data-section-group="admin">
-    <h2>Admin dashboard</h2>
-    <p id="admin_status" class="status" aria-live="polite"></p>
-    <button onclick="loadPendingClubs()">Load pending clubs</button>
-    <ul id="pending_club_list" class="card-list"></ul>
-    <label>Approve club ID <input type="number" id="approve_club_id"></label>
-    <button onclick="approveClub()">Approve</button>
-    <pre id="admin_result"></pre>
-    <div class="spaced-block">
-      <button onclick="loadFlags()">Load flagged content</button>
-      <ul id="flagged_list" class="card-list compact-list"></ul>
+  <section class="admin-only content-section" data-section-group="admin">
+    <div class="section-header">
+      <p class="eyebrow">Admin</p>
+      <div>
+        <h2>Admin Dashboard</h2>
+        <p id="admin_status" class="status" aria-live="polite"></p>
+        <p>Approve clubs, monitor flags, and keep the platform tidy.</p>
+      </div>
+    </div>
+    <div class="row card-grid">
+      <div class="panel">
+        <div class="section-header compact">
+          <div>
+            <h3>Pending Clubs</h3>
+            <p class="hint">Review and approve new submissions.</p>
+          </div>
+          <button onclick="loadPendingClubs()">Load Pending</button>
+        </div>
+        <ul id="pending_club_list" class="card-list"></ul>
+        <div class="button-row">
+          <label>Approve club ID <input type="number" id="approve_club_id"></label>
+          <button onclick="approveClub()">Approve</button>
+        </div>
+        <pre id="admin_result"></pre>
+      </div>
+      <div class="panel">
+        <div class="section-header compact">
+          <div>
+            <h3>Flagged Content</h3>
+            <p class="hint">Resolve reports from across the app.</p>
+          </div>
+          <button onclick="loadFlags()">Load Flags</button>
+        </div>
+        <ul id="flagged_list" class="card-list compact-list"></ul>
+      </div>
     </div>
   </section>
 
@@ -967,6 +1058,9 @@
   const sectionGroups = ["events", "clubs", "mystuff", "admin"];
 
   function showNavSection(target){
+    if(target === "admin" && personaRole !== "admin"){
+      target = "events";
+    }
     sectionGroups.forEach(group => {
       document.querySelectorAll(`[data-section-group="${group}"]`).forEach(section => {
         section.classList.toggle("hidden", group !== target);
@@ -981,10 +1075,14 @@
   function updateRoleVisibility(){
     const role = personaRole;
     document.querySelectorAll(".admin-only").forEach(el => {
-      el.classList.toggle("hidden", role !== "admin");
+      const hidden = role !== "admin";
+      el.classList.toggle("hidden", hidden);
+      el.setAttribute("aria-hidden", hidden);
     });
     document.querySelectorAll(".leader-only").forEach(el => {
-      el.classList.toggle("hidden", role !== "leader" && role !== "admin");
+      const hidden = role !== "leader" && role !== "admin";
+      el.classList.toggle("hidden", hidden);
+      el.setAttribute("aria-hidden", hidden);
     });
 
     const activeNav = document.querySelector(".nav-button.active")?.dataset.target ?? "events";
