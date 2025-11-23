@@ -159,7 +159,13 @@
             <h3>Clubs Directory</h3>
             <p class="hint">Join or leave clubs straight from the list.</p>
           </div>
-          <button onclick="loadClubs()">Refresh Clubs</button>
+          <div class="toolbar">
+            <label class="search-field">
+              <span class="sr-only">Search clubs</span>
+              <input id="club_search" type="search" placeholder="Search clubs" oninput="filterClubList()" aria-label="Search clubs">
+            </label>
+            <button onclick="loadClubs()">Refresh Clubs</button>
+          </div>
         </div>
         <ul id="club_list" class="card-list"></ul>
       </div>
@@ -173,7 +179,7 @@
         <h4>Join a club</h4>
         <label>Club ID <input type="number" id="join_club_id"></label>
         <button onclick="joinClub()">Request to Join</button>
-        <pre id="club_join_result"></pre>
+        <p id="club_join_result" class="status" aria-live="polite"></p>
       </div>
     </div>
 
@@ -189,11 +195,16 @@
         </div>
       </div>
       <p id="club_detail_status" class="status" aria-live="polite"></p>
-      <div id="club_detail"></div>
+      <div id="club_detail" class="club-detail"></div>
 
-      <div class="row leader-tools">
+      <div id="leader_tools_heading" class="leader-only leader-tools-heading hidden">
+        <p class="eyebrow">Leader Tools</p>
+        <h3>Manage Membership and Announcements</h3>
+        <p class="hint">Approve members, post updates, and create new club events.</p>
+      </div>
+      <div class="row leader-tools leader-only">
         <div class="leader-only panel inset">
-          <h4>Leader Tools</h4>
+          <h4>Approve Members</h4>
           <label>Approve member email <input id="approve_email" placeholder="student@example.edu"></label>
           <button onclick="approveMember()">Approve</button>
           <h4>Post announcement</h4>
@@ -301,6 +312,7 @@
   let myEvents = [];
   let clubMemberships = new Map();
   let clubRoles = new Map();
+  let allClubs = [];
   let myClubs = [];
   let personaName = "";
   let personaEmail = "";
@@ -719,17 +731,37 @@
     const ul = document.getElementById("club_list");
     ul.innerHTML = "";
     if(clubs.length === 0){
-      ul.innerHTML = '<li>No clubs found.</li>';
+      ul.innerHTML = '<li class="empty-state">No clubs match your search.</li>';
       return;
     }
 
     clubs.forEach(club => {
       const li = document.createElement("li");
-      li.innerHTML = `<strong>${club.name}</strong> — ${club.description}<br>` +
-                     `Members: ${club.member_count} | Upcoming events: ${club.upcoming_event_count}`;
+      li.classList.add("club-card");
+      const categoryLabel = club.category ? `<span class="pill pill-muted">${club.category}</span>` : '<span class="pill pill-muted">General</span>';
+      const memberCopy = club.member_count === 1 ? "Member" : "Members";
+      const eventCopy = club.upcoming_event_count === 1 ? "Upcoming Event" : "Upcoming Events";
+      li.innerHTML = `
+        <div class="club-card__header">
+          <div>
+            <h4 class="club-card__title">${club.name}</h4>
+            <p class="club-card__description">${club.description}</p>
+            <div class="club-card__meta">${categoryLabel}
+              <span class="pill pill-muted">${club.member_count} ${memberCopy}</span>
+              <span class="pill pill-muted">${club.upcoming_event_count} ${eventCopy}</span>
+            </div>
+          </div>
+        </div>
+      `;
       const action = document.createElement("div");
+      action.classList.add("club-card__actions");
       const status = clubMemberships.get(club.id);
+      const statusCopy = status === "approved" ? "You are a member" : status === "pending" ? "Request pending" : "Not a member";
+      const statusText = document.createElement("p");
+      statusText.classList.add("hint", "club-card__status");
+      statusText.textContent = statusCopy;
       const btn = document.createElement("button");
+      btn.classList.add("club-card__cta");
       if(status === "approved"){
         btn.textContent = "Leave";
         btn.onclick = () => leaveClub(club.id);
@@ -741,6 +773,7 @@
         btn.onclick = () => joinClub(club.id);
       }
       action.appendChild(btn);
+      action.appendChild(statusText);
       li.appendChild(action);
       ul.appendChild(li);
     });
@@ -756,9 +789,10 @@
         return;
       }
       const data = await res.json();
+      allClubs = data;
       clubMemberships = new Map(data.map(club => [club.id, club.membership_status]));
       clubRoles = new Map(data.map(club => [club.id, club.membership_role]));
-      renderClubs(data);
+      filterClubList();
     } catch (err){
       setStatus("clubs_status", "Failed to load clubs.", "error");
       document.getElementById("club_list").innerHTML = '<li>Unable to load clubs right now.</li>';
@@ -825,11 +859,18 @@
       headers: buildHeaders(true)
     });
     const body = await res.json();
-    document.getElementById("club_join_result").textContent = JSON.stringify(body, null, 2);
+    const joinStatus = document.getElementById("club_join_result");
     if(res.ok){
       setStatus("clubs_status", "Join request sent.", "success");
+      joinStatus.textContent = "Your join request was submitted.";
+      joinStatus.classList.remove("error");
+      joinStatus.classList.add("success");
     } else {
-      setStatus("clubs_status", `Join request failed: ${buildErrorMessage(res, body)}`, "error");
+      const message = `Join request failed: ${buildErrorMessage(res, body)}`;
+      setStatus("clubs_status", message, "error");
+      joinStatus.textContent = message;
+      joinStatus.classList.remove("success");
+      joinStatus.classList.add("error");
     }
     await loadClubs();
     await loadMyClubs();
@@ -842,14 +883,32 @@
       headers: buildHeaders(true)
     });
     const body = await res.json();
-    document.getElementById("club_join_result").textContent = JSON.stringify(body, null, 2);
+    const joinStatus = document.getElementById("club_join_result");
     if(res.ok){
       setStatus("clubs_status", "Left club.", "success");
+      joinStatus.textContent = "You have left the club.";
+      joinStatus.classList.remove("error");
+      joinStatus.classList.add("success");
     } else {
-      setStatus("clubs_status", `Leave failed: ${buildErrorMessage(res, body)}`, "error");
+      const message = `Leave failed: ${buildErrorMessage(res, body)}`;
+      setStatus("clubs_status", message, "error");
+      joinStatus.textContent = message;
+      joinStatus.classList.remove("success");
+      joinStatus.classList.add("error");
     }
     await loadClubs();
     await loadMyClubs();
+  }
+
+  function filterClubList(){
+    const search = document.getElementById("club_search")?.value.trim().toLowerCase() ?? "";
+    const filtered = !search
+      ? allClubs
+      : allClubs.filter(club =>
+          club.name.toLowerCase().includes(search) ||
+          club.description.toLowerCase().includes(search)
+        );
+    renderClubs(filtered);
   }
 
   async function loadClubDetail(){
@@ -876,39 +935,69 @@
     clearStatus("club_detail_status");
     loadedClubId = id;
     const div = document.getElementById("club_detail");
-    const members = data.members.map(m => `${m.user_email} (${m.role}, ${m.status})`).join(', ') || '—';
-    const announcements = data.announcements.map(a => `<li><strong>${a.title}</strong> — ${a.body} <button onclick=\"flagAnnouncement(${a.id})\">Flag</button></li>`).join('');
+    const members = data.members.map(m => {
+      const roleLabel = m.role.charAt(0).toUpperCase() + m.role.slice(1);
+      const statusLabel = m.status.charAt(0).toUpperCase() + m.status.slice(1);
+      return `<li class="member-row"><span class="member-email">${m.user_email}</span><span class="badge badge-role">${roleLabel}</span><span class="badge badge-status">${statusLabel}</span></li>`;
+    }).join('');
+    const announcements = data.announcements.map(a => {
+      const date = new Date(a.created_at).toLocaleDateString();
+      return `<li class="announcement-row"><span class="announcement-date">${date}</span> <strong>${a.title}</strong> — ${a.body} <button class="btn-ghost" onclick=\"flagAnnouncement(${a.id})\">Flag</button></li>`;
+    }).join('');
     const persona = currentPersona();
     const isClubLeader = data.members.some(m => m.user_email === persona.email && m.role === "leader" && m.status === "approved");
     const canManageClubEvents = persona.role === "admin" || isClubLeader;
     const events = data.events
       .map(ev => {
-        const deleteBtn = canManageClubEvents ? ` <button onclick="deleteEvent(${ev.id})">Delete</button>` : '';
-        return `<li>${ev.title} (${new Date(ev.starts_at).toLocaleDateString()}) cap ${ev.capacity} regs ${ev.registration_count}${deleteBtn}</li>`;
+        const deleteBtn = canManageClubEvents ? ` <button class="btn-ghost" onclick="deleteEvent(${ev.id})">Delete</button>` : '';
+        return `<li class="event-row"><div><strong>${ev.title}</strong><p class="hint">${new Date(ev.starts_at).toLocaleDateString()}</p></div><div class="event-meta">Cap ${ev.capacity} · ${ev.registration_count} registered</div>${deleteBtn}</li>`;
       })
       .join('');
     const pendingMembers = data.members.filter(m => m.status === "pending");
     const role = persona.role;
     const pendingList = pendingMembers.length
-      ? pendingMembers.map(m => `<li>${m.user_email} (${m.role}) <button onclick=\"approveMember('${m.user_email}')\">Approve</button></li>`).join('')
+      ? pendingMembers.map(m => {
+          const roleLabel = m.role.charAt(0).toUpperCase() + m.role.slice(1);
+          return `<li>${m.user_email} (${roleLabel}) <button onclick=\"approveMember('${m.user_email}')\">Approve</button></li>`;
+        }).join('')
       : '<li>No pending requests</li>';
     const pendingSection = ["leader", "admin"].includes(role)
-      ? `<div><h4>Pending members</h4><ul>${pendingList}</ul></div>`
+      ? `<div class="club-detail__section"><h4>Pending Members</h4><ul class="stacked-list">${pendingList}</ul></div>`
       : '';
+    const overviewBadges = `
+      <div class="club-detail__meta">
+        <span class="pill">${data.club.member_count} Members</span>
+        <span class="pill pill-muted">${data.club.upcoming_event_count} Upcoming Events</span>
+      </div>`;
     div.innerHTML = `
-      <h3>${data.club.name} ${data.club.approved ? '' : '(pending)'}</h3>
-      <p>${data.club.description}</p>
-      ${pendingSection}
-      <p><strong>Members:</strong> ${members}</p>
-      <div>
-        <h4>Announcements</h4>
-        <ul>${announcements || '<li>No announcements</li>'}</ul>
+      <div class="club-detail__section">
+        <p class="eyebrow">Overview</p>
+        <h3>${data.club.name} ${data.club.approved ? '' : '(Pending)'}</h3>
+        <p class="club-detail__description">${data.club.description}</p>
+        ${overviewBadges}
       </div>
-      <div>
-        <h4>Upcoming events</h4>
-        <ul>${events || '<li>No upcoming events</li>'}</ul>
+      ${pendingSection}
+      <div class="club-detail__grid">
+        <div class="club-detail__section">
+          <h4>Upcoming Events</h4>
+          <ul class="stacked-list">${events || '<li class="hint">No upcoming events</li>'}</ul>
+        </div>
+        <div class="club-detail__section">
+          <h4>Members</h4>
+          <ul class="stacked-list">${members || '<li class="hint">No members listed</li>'}</ul>
+        </div>
+        <div class="club-detail__section">
+          <h4>Announcements</h4>
+          <ul class="stacked-list">${announcements || '<li class="hint">No announcements</li>'}</ul>
+        </div>
       </div>
     `;
+
+    const leaderHeading = document.getElementById("leader_tools_heading");
+    if(leaderHeading){
+      const shouldShowLeaderTools = ["leader", "admin"].includes(persona.role);
+      leaderHeading.classList.toggle("hidden", !shouldShowLeaderTools);
+    }
   }
 
   async function approveMember(emailOverride){
