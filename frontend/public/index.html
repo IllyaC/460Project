@@ -197,30 +197,58 @@
       <p id="club_detail_status" class="status" aria-live="polite"></p>
       <div id="club_detail" class="club-detail"></div>
 
-      <div id="leader_tools_heading" class="leader-only leader-tools-heading hidden">
-        <p class="eyebrow">Leader Tools</p>
-        <h3>Manage Membership and Announcements</h3>
-        <p class="hint">Approve members, post updates, and create new club events.</p>
-      </div>
-      <div class="row leader-tools leader-only">
-        <div class="leader-only panel inset">
-          <h4>Approve Members</h4>
-          <label>Approve member email <input id="approve_email" placeholder="student@example.edu"></label>
-          <button onclick="approveMember()">Approve</button>
-          <h4>Post announcement</h4>
-          <label>Title <input id="ann_title"></label>
-          <label>Body <textarea id="ann_body"></textarea></label>
-          <button onclick="postAnnouncement()">Publish</button>
+      <div id="leader_dashboard" class="leader-dashboard leader-only hidden">
+        <div class="section-header compact">
+          <div>
+            <p class="eyebrow">Leader Dashboard</p>
+            <h3>Manage Events, Members, and Updates</h3>
+            <p class="hint">Create club events, approve membership requests, and share announcements.</p>
+          </div>
         </div>
-        <div class="leader-only panel inset">
-          <h4>Schedule Club Event</h4>
-          <label>Title <input id="club_event_title" value="Study Session"></label>
-          <label>Starts At <input id="club_event_starts"></label>
-          <label>Location <input id="club_event_location" value="Library 201"></label>
-          <label>Capacity <input type="number" id="club_event_capacity" value="10"></label>
-          <label>Price (cents) <input type="number" id="club_event_price" value="0"></label>
-          <label>Category <input id="club_event_category" value="community"></label>
-          <button onclick="createClubEvent()">Create</button>
+        <div class="leader-dashboard__grid">
+          <div class="panel leader-card">
+            <p class="eyebrow">Create Event</p>
+            <h4>Schedule Club Event</h4>
+            <p class="hint">Share dates, locations, and capacity for upcoming meetups.</p>
+            <div class="form-grid">
+              <label>Title <input id="club_event_title" value="Study Session"></label>
+              <label>Starts At <input id="club_event_starts"></label>
+              <label>Location <input id="club_event_location" value="Library 201"></label>
+              <label>Capacity <input type="number" id="club_event_capacity" value="10"></label>
+              <label>Price (cents) <input type="number" id="club_event_price" value="0"></label>
+              <label>Category <input id="club_event_category" value="community"></label>
+            </div>
+            <div class="button-row aligned">
+              <button onclick="createClubEvent()">Create Event</button>
+            </div>
+          </div>
+
+          <div class="panel leader-card">
+            <p class="eyebrow">Pending Members</p>
+            <h4>Approve Requests</h4>
+            <p class="hint">Review pending join requests for this club.</p>
+            <div class="form-grid">
+              <label>Approve member email <input id="approve_email" placeholder="student@example.edu"></label>
+            </div>
+            <div class="button-row aligned">
+              <button onclick="approveMember()">Approve</button>
+            </div>
+            <ul id="pending_members_list" class="stacked-list slim-list"><li class="hint">Load a club to view pending members.</li></ul>
+          </div>
+
+          <div class="panel leader-card">
+            <p class="eyebrow">Post Announcement</p>
+            <h4>Share Updates</h4>
+            <p class="hint">Let members know about schedule changes or club news.</p>
+            <div class="form-grid">
+              <label>Title <input id="ann_title"></label>
+              <label>Body <textarea id="ann_body"></textarea></label>
+            </div>
+            <div class="button-row aligned">
+              <button onclick="postAnnouncement()">Post Announcement</button>
+            </div>
+            <ul id="leader_announcements_list" class="stacked-list slim-list"><li class="hint">Announcements will appear here.</li></ul>
+          </div>
         </div>
       </div>
     </div>
@@ -953,17 +981,6 @@
         return `<li class="event-row"><div><strong>${ev.title}</strong><p class="hint">${new Date(ev.starts_at).toLocaleDateString()}</p></div><div class="event-meta">Cap ${ev.capacity} · ${ev.registration_count} registered</div>${deleteBtn}</li>`;
       })
       .join('');
-    const pendingMembers = data.members.filter(m => m.status === "pending");
-    const role = persona.role;
-    const pendingList = pendingMembers.length
-      ? pendingMembers.map(m => {
-          const roleLabel = m.role.charAt(0).toUpperCase() + m.role.slice(1);
-          return `<li>${m.user_email} (${roleLabel}) <button onclick=\"approveMember('${m.user_email}')\">Approve</button></li>`;
-        }).join('')
-      : '<li>No pending requests</li>';
-    const pendingSection = ["leader", "admin"].includes(role)
-      ? `<div class="club-detail__section"><h4>Pending Members</h4><ul class="stacked-list">${pendingList}</ul></div>`
-      : '';
     const overviewBadges = `
       <div class="club-detail__meta">
         <span class="pill">${data.club.member_count} Members</span>
@@ -976,7 +993,6 @@
         <p class="club-detail__description">${data.club.description}</p>
         ${overviewBadges}
       </div>
-      ${pendingSection}
       <div class="club-detail__grid">
         <div class="club-detail__section">
           <h4>Upcoming Events</h4>
@@ -993,10 +1009,31 @@
       </div>
     `;
 
-    const leaderHeading = document.getElementById("leader_tools_heading");
-    if(leaderHeading){
-      const shouldShowLeaderTools = ["leader", "admin"].includes(persona.role);
-      leaderHeading.classList.toggle("hidden", !shouldShowLeaderTools);
+    const pendingMembers = data.members.filter(m => m.status === "pending");
+    const pendingList = document.getElementById("pending_members_list");
+    if(pendingList){
+      pendingList.innerHTML = pendingMembers.length
+        ? pendingMembers.map(m => {
+            const roleLabel = m.role.charAt(0).toUpperCase() + m.role.slice(1);
+            return `<li class="member-row"><span class="member-email">${m.user_email}</span><span class="badge badge-role">${roleLabel}</span><button class="btn-secondary" onclick=\"approveMember('${m.user_email}')\">Approve</button></li>`;
+          }).join('')
+        : '<li class="hint">No pending requests.</li>';
+    }
+
+    const announcementList = document.getElementById("leader_announcements_list");
+    if(announcementList){
+      announcementList.innerHTML = data.announcements.length
+        ? data.announcements.map(a => {
+            const date = new Date(a.created_at).toLocaleDateString();
+            return `<li class="announcement-row"><span class="announcement-date">${date}</span><strong>${a.title}</strong><span>${a.body}</span></li>`;
+          }).join('')
+        : '<li class="hint">No announcements yet.</li>';
+    }
+
+    const leaderDashboard = document.getElementById("leader_dashboard");
+    if(leaderDashboard){
+      const shouldShowLeaderTools = persona.role === "admin" || isClubLeader;
+      leaderDashboard.classList.toggle("hidden", !shouldShowLeaderTools);
     }
   }
 
