@@ -4,7 +4,7 @@ from typing import Literal, Optional
 
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 from dotenv import load_dotenv
 
@@ -275,6 +275,7 @@ def delete_event(
     else:
         ensure_admin(user)
 
+    db.execute(delete(Registration).where(Registration.event_id == event.id))
     db.delete(event)
     return {"status": "deleted"}
 

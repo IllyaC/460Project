@@ -68,7 +68,7 @@
           </select>
         </label>
         <label><input type="checkbox" id="filter_free"> Free events only</label>
-        <button onclick="listEvents()">Run search</button>
+        <button onclick="loadEvents()">Run search</button>
         <button type="button" onclick="resetFilters()">Reset filters</button>
         <button onclick="loadTrending()">Trending</button>
       </div>
@@ -325,7 +325,7 @@
     } else {
       setStatus("events_status", `Create event failed: ${buildErrorMessage(res, body)}`, "error");
     }
-    listEvents();
+    loadEvents();
   }
 
   function resetFilters(){
@@ -336,10 +336,10 @@
     document.getElementById("filter_location").value = "";
     document.getElementById("filter_sort").value = "date";
     document.getElementById("filter_free").checked = false;
-    listEvents();
+    loadEvents();
   }
 
-  async function listEvents(skipRegistrationSync = false){
+  async function loadEvents(skipRegistrationSync = false){
     clearStatus("events_status");
     const params = new URLSearchParams();
     const start = document.getElementById("filter_start").value;
@@ -454,7 +454,7 @@
       setStatus("events_status", `Register failed: ${buildErrorMessage(res, body)}`, "error");
     }
     await fetchMyRegistrations(true);
-    await listEvents(true);
+    await loadEvents(true);
   }
 
   async function unregisterEvent(eventId){
@@ -469,7 +469,7 @@
       setStatus("events_status", `Unregister failed: ${buildErrorMessage(res, body)}`, "error");
     }
     await fetchMyRegistrations(true);
-    await listEvents(true);
+    await loadEvents(true);
   }
 
   async function deleteEvent(eventId){
@@ -482,7 +482,7 @@
     const message = res.ok ? "Event deleted" : `Delete failed: ${buildErrorMessage(res, detail)}`;
     setStatus("events_status", message, res.ok ? "success" : "error");
     await fetchMyRegistrations(true);
-    await listEvents();
+    await loadEvents();
     if(loadedClubId){
       await loadClubDetail();
     }
@@ -924,7 +924,7 @@
     updateRoleVisibility();
   });
 
-  listEvents();
+  loadEvents();
   loadTrending();
   loadClubs();
   loadMyClubs();
