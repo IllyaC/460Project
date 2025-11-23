@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from ..deps import ensure_admin, get_db, get_user
@@ -60,11 +60,34 @@ def pending_clubs(
 
 @router.get("/api/admin/clubs/overview", response_model=list[AdminClubSummary])
 def clubs_overview(
+    status: str | None = None,
+    category: str | None = None,
+    search: str | None = None,
     db: Session = Depends(get_db),
     user: User = Depends(get_user),
 ):
     ensure_admin(user)
-    clubs = db.execute(select(Club).order_by(Club.name.asc())).scalars().all()
+    stmt = select(Club).order_by(Club.name.asc())
+
+    filters = []
+    normalized_status = status.strip().lower() if status is not None else None
+    if normalized_status:
+        if normalized_status == "approved":
+            filters.append(Club.approved.is_(True))
+        elif normalized_status in {"pending", "unapproved"}:
+            filters.append(Club.approved.is_(False))
+
+    if category is not None and category.strip():
+        filters.append(Club.category == category.strip())
+
+    if search is not None and search.strip():
+        lowered = f"%{search.strip().lower()}%"
+        filters.append(func.lower(Club.name).like(lowered))
+
+    if filters:
+        stmt = stmt.where(*filters)
+
+    clubs = db.execute(stmt).scalars().all()
     return [admin_club_summary(db, club) for club in clubs]
 
 

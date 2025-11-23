@@ -28,6 +28,7 @@ class Club(Base):
     description: Mapped[str] = mapped_column(Text)
     approved: Mapped[bool] = mapped_column(Boolean, default=False)
     created_by_email: Mapped[str] = mapped_column(String(255))
+    category: Mapped[str | None] = mapped_column(String(50), default=None)
 
 
 class ClubMember(Base):
