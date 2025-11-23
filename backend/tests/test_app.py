@@ -97,6 +97,36 @@ def test_register_student_and_leader(client):
     assert leader["is_approved"] is False
 
 
+def test_list_clubs_requires_auth_and_returns_seeded_data(client):
+    student_headers = auth_headers("student1@school.edu", "student")
+    response = client.get("/api/clubs", headers=student_headers)
+    assert response.status_code == 200
+    clubs = response.json()
+    assert isinstance(clubs, list) and clubs
+    expected_keys = {
+        "id",
+        "name",
+        "description",
+        "approved",
+        "created_by_email",
+        "member_count",
+        "upcoming_event_count",
+        "membership_status",
+        "membership_role",
+    }
+    for club in clubs:
+        assert expected_keys.issubset(club.keys())
+
+    show_all_resp = client.get(
+        "/api/clubs", headers=student_headers, params={"search": ""}
+    )
+    assert show_all_resp.status_code == 200
+    assert len(show_all_resp.json()) == len(clubs)
+
+    unauthorized_resp = client.get("/api/clubs")
+    assert unauthorized_resp.status_code == 401
+
+
 def test_login_success_and_failure(client):
     register_resp = client.post(
         "/api/auth/register",

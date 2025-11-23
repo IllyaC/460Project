@@ -69,18 +69,30 @@ function renderClubs(clubs){
 async function loadClubs(){
   try {
     const res = await apiGetClubs();
+    const body = await readJson(res);
     if(!res.ok){
-      const body = await readJson(res);
-      setStatus("clubs_status", `Failed to load clubs: ${buildErrorMessage(res, body)}`, "error");
+      console.error("Failed to load clubs", { status: res.status, body });
+      const detail = buildErrorMessage(res, body);
+      const friendly = res.status === 401
+        ? "You must be signed in to view clubs."
+        : "Unable to load clubs right now.";
+      setStatus("clubs_status", `Failed to load clubs: ${detail}`, "error");
+      document.getElementById("club_list").innerHTML = `<li>${friendly}</li>`;
+      return;
+    }
+    if(!Array.isArray(body)){
+      console.error("Unexpected clubs payload", body);
+      setStatus("clubs_status", "Failed to load clubs: unexpected response.", "error");
       document.getElementById("club_list").innerHTML = '<li>Unable to load clubs right now.</li>';
       return;
     }
-    const data = await res.json();
+    const data = body;
     allClubs = data;
     clubMemberships = new Map(data.map(club => [club.id, club.membership_status]));
     clubRoles = new Map(data.map(club => [club.id, club.membership_role]));
     filterClubList();
   } catch (err){
+    console.error("Failed to load clubs", err);
     setStatus("clubs_status", "Failed to load clubs.", "error");
     document.getElementById("club_list").innerHTML = '<li>Unable to load clubs right now.</li>';
   }

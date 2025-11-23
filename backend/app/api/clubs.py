@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from ..deps import ensure_leader, ensure_leader_role, get_db, get_user
@@ -39,8 +39,31 @@ def create_club(
 
 
 @router.get("/api/clubs", response_model=list[ClubSummary])
-def list_clubs(db: Session = Depends(get_db), user: User = Depends(get_user)):
-    clubs = db.execute(select(Club).order_by(Club.name.asc())).scalars().all()
+def list_clubs(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_user),
+    search: str | None = None,
+    category: str | None = None,
+    approved: bool | None = None,
+):
+    search = search.strip() if isinstance(search, str) else None
+    category = category.strip() if isinstance(category, str) else None
+
+    stmt = select(Club)
+    if search:
+        like_pattern = f"%{search.lower()}%"
+        stmt = stmt.where(
+            or_(
+                func.lower(Club.name).like(like_pattern),
+                func.lower(Club.description).like(like_pattern),
+            )
+        )
+    if category:
+        stmt = stmt.where(Club.category == category)
+    if approved is not None:
+        stmt = stmt.where(Club.approved == approved)
+
+    clubs = db.execute(stmt.order_by(Club.name.asc())).scalars().all()
     return [club_summary(db, club, user.email) for club in clubs]
 
 
