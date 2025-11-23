@@ -43,6 +43,7 @@
 
   <section data-section-group="events">
     <h2>Discover events</h2>
+    <p id="events_status" class="status" aria-live="polite"></p>
     <div class="row">
       <div>
         <label>Starts after <input id="filter_start" placeholder="2024-09-01T00:00:00Z"></label>
@@ -107,6 +108,7 @@
 
   <section data-section-group="clubs">
     <h2>Clubs directory</h2>
+    <p id="clubs_status" class="status" aria-live="polite"></p>
     <div class="row">
       <div>
         <p>Join or leave clubs directly from the list using the buttons below.</p>
@@ -129,6 +131,7 @@
 
   <section data-section-group="clubs">
     <h2>Club page</h2>
+    <p id="club_detail_status" class="status" aria-live="polite"></p>
     <label>Club ID <input type="number" id="club_detail_id" value="1"></label>
     <button onclick="loadClubDetail()">Load club</button>
     <div id="club_detail"></div>
@@ -165,6 +168,7 @@
 
   <section class="admin-only" data-section-group="admin">
     <h2>Admin dashboard</h2>
+    <p id="admin_status" class="status" aria-live="polite"></p>
     <button onclick="loadPendingClubs()">Load pending clubs</button>
     <ul id="pending_club_list" class="card-list"></ul>
     <label>Approve club ID <input type="number" id="approve_club_id"></label>
@@ -184,6 +188,30 @@
   let clubMemberships = new Map();
   let clubRoles = new Map();
   let myClubs = [];
+
+  function setStatus(id, message, type = "info"){
+    const el = document.getElementById(id);
+    if(!el){ return; }
+    el.textContent = message;
+    el.className = `status ${type}`;
+  }
+
+  function clearStatus(id){
+    setStatus(id, "");
+  }
+
+  async function readJson(res){
+    try {
+      return await res.json();
+    } catch (err){
+      return null;
+    }
+  }
+
+  function buildErrorMessage(res, body){
+    const detail = body?.detail || body?.error || body?.message;
+    return detail ? `${detail} (status ${res.status})` : `Status ${res.status}`;
+  }
 
   function isoPlusDays(days){
     const dt = new Date(Date.now() + days * 86400000);
@@ -252,7 +280,7 @@
       row.scrollIntoView({ behavior: "smooth", block: "center" });
       setTimeout(() => row.classList.remove("highlight"), 1600);
     } else {
-      alert("Event not in the current results. Run a search that includes it to jump there.");
+      setStatus("events_status", "Event not in the current results. Run a search that includes it to jump there.", "error");
     }
   }
 
@@ -291,7 +319,12 @@
       headers: buildHeaders(true),
       body: JSON.stringify(payload)
     });
-    alert(`Create event: ${res.status}`);
+    const body = await readJson(res);
+    if(res.ok){
+      setStatus("events_status", "Event created successfully.", "success");
+    } else {
+      setStatus("events_status", `Create event failed: ${buildErrorMessage(res, body)}`, "error");
+    }
     listEvents();
   }
 
@@ -307,6 +340,7 @@
   }
 
   async function listEvents(skipRegistrationSync = false){
+    clearStatus("events_status");
     const params = new URLSearchParams();
     const start = document.getElementById("filter_start").value;
     const end = document.getElementById("filter_end").value;
@@ -325,11 +359,31 @@
     if(!skipRegistrationSync){
       await fetchMyRegistrations(false);
     }
-
-    const res = await fetch(`${API}/events?${params.toString()}`);
-    const data = await res.json();
     const tbody = document.getElementById("events_tbody");
     tbody.innerHTML = "";
+
+    let res;
+    try {
+      res = await fetch(`${API}/events?${params.toString()}`);
+    } catch (err){
+      setStatus("events_status", "Failed to load events. Please try again.", "error");
+      tbody.innerHTML = '<tr><td colspan="9">Unable to reach the events service.</td></tr>';
+      return;
+    }
+
+    if(!res.ok){
+      const body = await readJson(res);
+      setStatus("events_status", `Failed to load events: ${buildErrorMessage(res, body)}`, "error");
+      tbody.innerHTML = '<tr><td colspan="9">Unable to load events.</td></tr>';
+      return;
+    }
+
+    const data = await res.json();
+    if(data.length === 0){
+      tbody.innerHTML = '<tr><td colspan="9">No events found. Adjust your filters and try again.</td></tr>';
+      return;
+    }
+
     data.forEach(ev => {
       const tr = document.createElement("tr");
       tr.id = `event-row-${ev.id}`;
@@ -361,15 +415,30 @@
   }
 
   async function loadTrending(){
-    const res = await fetch(`${API}/events/trending`);
-    const data = await res.json();
     const ul = document.getElementById("trending_list");
     ul.innerHTML = "";
-    data.forEach(ev => {
-      const li = document.createElement("li");
-      li.textContent = `${ev.title} (${ev.registration_count} regs)`;
-      ul.appendChild(li);
-    });
+    try {
+      const res = await fetch(`${API}/events/trending`);
+      if(!res.ok){
+        const body = await readJson(res);
+        setStatus("events_status", `Failed to load trending: ${buildErrorMessage(res, body)}`, "error");
+        ul.innerHTML = '<li>No trending events right now.</li>';
+        return;
+      }
+      const data = await res.json();
+      if(data.length === 0){
+        ul.innerHTML = '<li>No trending events right now.</li>';
+        return;
+      }
+      data.forEach(ev => {
+        const li = document.createElement("li");
+        li.textContent = `${ev.title} (${ev.registration_count} regs)`;
+        ul.appendChild(li);
+      });
+    } catch (err){
+      setStatus("events_status", "Failed to load trending events.", "error");
+      ul.innerHTML = '<li>No trending events right now.</li>';
+    }
   }
 
   async function registerEvent(eventId){
@@ -378,8 +447,12 @@
       headers: buildHeaders(true),
       body: JSON.stringify({event_id: eventId})
     });
-    const body = res.ok ? "Registered" : `Register failed: ${res.status}`;
-    alert(body);
+    const body = await readJson(res);
+    if(res.ok){
+      setStatus("events_status", "Registered for event!", "success");
+    } else {
+      setStatus("events_status", `Register failed: ${buildErrorMessage(res, body)}`, "error");
+    }
     await fetchMyRegistrations(true);
     await listEvents(true);
   }
@@ -389,8 +462,12 @@
       method: "DELETE",
       headers: buildHeaders(false)
     });
-    const body = res.ok ? "Unregistered" : `Unregister failed: ${res.status}`;
-    alert(body);
+    const body = await readJson(res);
+    if(res.ok){
+      setStatus("events_status", "You are no longer registered for this event.", "success");
+    } else {
+      setStatus("events_status", `Unregister failed: ${buildErrorMessage(res, body)}`, "error");
+    }
     await fetchMyRegistrations(true);
     await listEvents(true);
   }
@@ -401,9 +478,9 @@
       method: "DELETE",
       headers: buildHeaders(false)
     });
-    const detail = await res.json().catch(() => ({}));
-    const message = res.ok ? "Event deleted" : `Delete failed: ${res.status}${detail.detail ? ` - ${detail.detail}` : ''}`;
-    alert(message);
+    const detail = await readJson(res);
+    const message = res.ok ? "Event deleted" : `Delete failed: ${buildErrorMessage(res, detail)}`;
+    setStatus("events_status", message, res.ok ? "success" : "error");
     await fetchMyRegistrations(true);
     await listEvents();
     if(loadedClubId){
@@ -447,11 +524,22 @@
   }
 
   async function loadClubs(){
-    const res = await fetch(`${API}/clubs`, { headers: buildHeaders(false) });
-    const data = await res.json();
-    clubMemberships = new Map(data.map(club => [club.id, club.membership_status]));
-    clubRoles = new Map(data.map(club => [club.id, club.membership_role]));
-    renderClubs(data);
+    try {
+      const res = await fetch(`${API}/clubs`, { headers: buildHeaders(false) });
+      if(!res.ok){
+        const body = await readJson(res);
+        setStatus("clubs_status", `Failed to load clubs: ${buildErrorMessage(res, body)}`, "error");
+        document.getElementById("club_list").innerHTML = '<li>Unable to load clubs right now.</li>';
+        return;
+      }
+      const data = await res.json();
+      clubMemberships = new Map(data.map(club => [club.id, club.membership_status]));
+      clubRoles = new Map(data.map(club => [club.id, club.membership_role]));
+      renderClubs(data);
+    } catch (err){
+      setStatus("clubs_status", "Failed to load clubs.", "error");
+      document.getElementById("club_list").innerHTML = '<li>Unable to load clubs right now.</li>';
+    }
   }
 
   function renderMyClubs(){
@@ -473,12 +561,15 @@
       const res = await fetch(`${API}/clubs/mine`, { headers: buildHeaders(false) });
       if(!res.ok){
         myClubs = [];
+        setStatus("clubs_status", "Failed to load your clubs.", "error");
       } else {
         myClubs = await res.json();
+        clearStatus("clubs_status");
       }
     } catch (err){
       console.error("Failed to load my clubs", err);
       myClubs = [];
+      setStatus("clubs_status", "Failed to load your clubs.", "error");
     }
     renderMyClubs();
   }
@@ -493,7 +584,13 @@
       headers: buildHeaders(true),
       body: JSON.stringify(payload)
     });
-    document.getElementById("club_create_result").textContent = JSON.stringify(await res.json(), null, 2);
+    const body = await readJson(res);
+    document.getElementById("club_create_result").textContent = JSON.stringify(body, null, 2);
+    if(res.ok){
+      setStatus("clubs_status", "Club submitted for approval.", "success");
+    } else {
+      setStatus("clubs_status", `Create club failed: ${buildErrorMessage(res, body)}`, "error");
+    }
     loadPendingClubs();
   }
 
@@ -506,7 +603,11 @@
     });
     const body = await res.json();
     document.getElementById("club_join_result").textContent = JSON.stringify(body, null, 2);
-    alert(`Join request: ${res.status}`);
+    if(res.ok){
+      setStatus("clubs_status", "Join request sent.", "success");
+    } else {
+      setStatus("clubs_status", `Join request failed: ${buildErrorMessage(res, body)}`, "error");
+    }
     await loadClubs();
     await loadMyClubs();
   }
@@ -519,16 +620,37 @@
     });
     const body = await res.json();
     document.getElementById("club_join_result").textContent = JSON.stringify(body, null, 2);
-    alert(res.ok ? "Left club" : `Leave failed: ${res.status}`);
+    if(res.ok){
+      setStatus("clubs_status", "Left club.", "success");
+    } else {
+      setStatus("clubs_status", `Leave failed: ${buildErrorMessage(res, body)}`, "error");
+    }
     await loadClubs();
     await loadMyClubs();
   }
 
   async function loadClubDetail(){
     const id = Number(document.getElementById("club_detail_id").value);
-    if(!id){ return; }
-    const res = await fetch(`${API}/clubs/${id}`, { headers: buildHeaders(false) });
+    if(!id){
+      setStatus("club_detail_status", "Enter a club ID to load.", "error");
+      return;
+    }
+    let res;
+    try {
+      res = await fetch(`${API}/clubs/${id}`, { headers: buildHeaders(false) });
+    } catch (err){
+      setStatus("club_detail_status", "Failed to load club details.", "error");
+      document.getElementById("club_detail").textContent = "";
+      return;
+    }
+    if(!res.ok){
+      const body = await readJson(res);
+      setStatus("club_detail_status", `Failed to load club: ${buildErrorMessage(res, body)}`, "error");
+      document.getElementById("club_detail").textContent = "";
+      return;
+    }
     const data = await res.json();
+    clearStatus("club_detail_status");
     loadedClubId = id;
     const div = document.getElementById("club_detail");
     const members = data.members.map(m => `${m.user_email} (${m.role}, ${m.status})`).join(', ') || '—';
@@ -567,18 +689,23 @@
   }
 
   async function approveMember(emailOverride){
-    if(!loadedClubId){ alert('Load a club first'); return; }
+    if(!loadedClubId){ setStatus('club_detail_status', 'Load a club first.', 'error'); return; }
     const email = emailOverride ?? document.getElementById("approve_email").value;
     const res = await fetch(`${API}/clubs/${loadedClubId}/members/${encodeURIComponent(email)}/approve`, {
       method: "POST",
       headers: buildHeaders(true)
     });
-    alert(`Approve member: ${res.status}`);
+    const body = await readJson(res);
+    if(res.ok){
+      setStatus("club_detail_status", "Member approved.", "success");
+    } else {
+      setStatus("club_detail_status", `Approve member failed: ${buildErrorMessage(res, body)}`, "error");
+    }
     loadClubDetail();
   }
 
   async function postAnnouncement(){
-    if(!loadedClubId){ alert('Load a club first'); return; }
+    if(!loadedClubId){ setStatus('club_detail_status', 'Load a club first.', 'error'); return; }
     const payload = {
       title: document.getElementById("ann_title").value,
       body: document.getElementById("ann_body").value
@@ -588,12 +715,17 @@
       headers: buildHeaders(true),
       body: JSON.stringify(payload)
     });
-    alert(`Announcement: ${res.status}`);
+    const body = await readJson(res);
+    if(res.ok){
+      setStatus("club_detail_status", "Announcement posted.", "success");
+    } else {
+      setStatus("club_detail_status", `Announcement failed: ${buildErrorMessage(res, body)}`, "error");
+    }
     loadClubDetail();
   }
 
   async function createClubEvent(){
-    if(!loadedClubId){ alert('Load a club first'); return; }
+    if(!loadedClubId){ setStatus('club_detail_status', 'Load a club first.', 'error'); return; }
     const payload = {
       title: document.getElementById("club_event_title").value,
       starts_at: document.getElementById("club_event_starts").value,
@@ -607,7 +739,12 @@
       headers: buildHeaders(true),
       body: JSON.stringify(payload)
     });
-    alert(`Club event: ${res.status}`);
+    const body = await readJson(res);
+    if(res.ok){
+      setStatus("club_detail_status", "Club event created.", "success");
+    } else {
+      setStatus("club_detail_status", `Club event failed: ${buildErrorMessage(res, body)}`, "error");
+    }
     loadClubDetail();
   }
 
@@ -620,9 +757,14 @@
         headers: buildHeaders(true),
         body: JSON.stringify({ item_type: "event", item_id: id, reason })
       });
-      alert(res.ok ? "Flag submitted" : `Flag failed: ${res.status}`);
+      const body = await readJson(res);
+      if(res.ok){
+        setStatus("events_status", "Flag submitted.", "success");
+      } else {
+        setStatus("events_status", `Flag failed: ${buildErrorMessage(res, body)}`, "error");
+      }
     } catch (err){
-      alert("Flag failed");
+      setStatus("events_status", "Flag failed.", "error");
     }
   }
 
@@ -635,48 +777,95 @@
         headers: buildHeaders(true),
         body: JSON.stringify({ item_type: "announcement", item_id: id, reason })
       });
-      alert(res.ok ? "Flag submitted" : `Flag failed: ${res.status}`);
+      const body = await readJson(res);
+      if(res.ok){
+        setStatus("club_detail_status", "Flag submitted.", "success");
+      } else {
+        setStatus("club_detail_status", `Flag failed: ${buildErrorMessage(res, body)}`, "error");
+      }
     } catch (err){
-      alert("Flag failed");
+      setStatus("club_detail_status", "Flag failed.", "error");
     }
   }
 
   async function loadFlags(){
-    const res = await fetch(`${API}/admin/flags`, { headers: buildHeaders(false) });
     const ul = document.getElementById("flagged_list");
     ul.innerHTML = "";
-    if(res.status === 403){
-      ul.innerHTML = '<li>Admin role required</li>';
-      return;
+    try {
+      const res = await fetch(`${API}/admin/flags`, { headers: buildHeaders(false) });
+      if(res.status === 403){
+        setStatus("admin_status", "Admin role required.", "error");
+        ul.innerHTML = '<li>Admin role required</li>';
+        return;
+      }
+      if(!res.ok){
+        const body = await readJson(res);
+        setStatus("admin_status", `Failed to load flags: ${buildErrorMessage(res, body)}`, "error");
+        ul.innerHTML = '<li>No flagged items found.</li>';
+        return;
+      }
+      const data = await res.json();
+      if(data.length === 0){
+        ul.innerHTML = '<li>No flagged items found.</li>';
+        clearStatus("admin_status");
+        return;
+      }
+      clearStatus("admin_status");
+      data.forEach(flag => {
+        const li = document.createElement("li");
+        li.innerHTML = `${flag.item_type} #${flag.item_id} — ${flag.reason} (${flag.user_email}) on ${new Date(flag.created_at).toLocaleString()} ` +
+                       `<button onclick="resolveFlag(${flag.id})">Resolve</button>`;
+        ul.appendChild(li);
+      });
+    } catch (err){
+      setStatus("admin_status", "Failed to load flags.", "error");
+      ul.innerHTML = '<li>No flagged items found.</li>';
     }
-    const data = await res.json();
-    data.forEach(flag => {
-      const li = document.createElement("li");
-      li.innerHTML = `${flag.item_type} #${flag.item_id} — ${flag.reason} (${flag.user_email}) on ${new Date(flag.created_at).toLocaleString()} ` +
-                     `<button onclick="resolveFlag(${flag.id})">Resolve</button>`;
-      ul.appendChild(li);
-    });
   }
 
   async function resolveFlag(id){
-    await fetch(`${API}/admin/flags/${id}/resolve`, { method: "POST", headers: buildHeaders(false) });
+    const res = await fetch(`${API}/admin/flags/${id}/resolve`, { method: "POST", headers: buildHeaders(false) });
+    if(res.ok){
+      setStatus("admin_status", "Flag resolved.", "success");
+    } else {
+      const body = await readJson(res);
+      setStatus("admin_status", `Resolve failed: ${buildErrorMessage(res, body)}`, "error");
+    }
     loadFlags();
   }
 
   async function loadPendingClubs(){
-    const res = await fetch(`${API}/admin/clubs/pending`, { headers: buildHeaders(false) });
-    if(res.status === 403){
-      document.getElementById("pending_club_list").innerHTML = '<li>Admin role required</li>';
-      return;
-    }
-    const data = await res.json();
     const ul = document.getElementById("pending_club_list");
     ul.innerHTML = "";
-    data.forEach(club => {
-      const li = document.createElement("li");
-      li.textContent = `${club.id} — ${club.name} (${club.member_count} approved members)`;
-      ul.appendChild(li);
-    });
+    try {
+      const res = await fetch(`${API}/admin/clubs/pending`, { headers: buildHeaders(false) });
+      if(res.status === 403){
+        setStatus("admin_status", "Admin role required.", "error");
+        ul.innerHTML = '<li>Admin role required</li>';
+        return;
+      }
+      if(!res.ok){
+        const body = await readJson(res);
+        setStatus("admin_status", `Failed to load pending clubs: ${buildErrorMessage(res, body)}`, "error");
+        ul.innerHTML = '<li>No pending clubs.</li>';
+        return;
+      }
+      const data = await res.json();
+      if(data.length === 0){
+        ul.innerHTML = '<li>No pending clubs.</li>';
+        clearStatus("admin_status");
+        return;
+      }
+      clearStatus("admin_status");
+      data.forEach(club => {
+        const li = document.createElement("li");
+        li.textContent = `${club.id} — ${club.name} (${club.member_count} approved members)`;
+        ul.appendChild(li);
+      });
+    } catch (err){
+      setStatus("admin_status", "Failed to load pending clubs.", "error");
+      ul.innerHTML = '<li>No pending clubs.</li>';
+    }
   }
 
   async function approveClub(){
@@ -685,7 +874,13 @@
       method: "POST",
       headers: buildHeaders(false)
     });
-    document.getElementById("admin_result").textContent = JSON.stringify(await res.json(), null, 2);
+    const body = await readJson(res);
+    document.getElementById("admin_result").textContent = JSON.stringify(body, null, 2);
+    if(res.ok){
+      setStatus("admin_status", "Club approved.", "success");
+    } else {
+      setStatus("admin_status", `Approve failed: ${buildErrorMessage(res, body)}`, "error");
+    }
     loadClubs();
     loadPendingClubs();
   }
