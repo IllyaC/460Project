@@ -250,6 +250,42 @@ def test_admin_can_delete_general_event(client):
     assert delete_resp.status_code == 200
 
 
+def test_deleting_event_removes_registrations(client):
+    admin_headers = auth_headers("admin@school.edu", "admin")
+    event_resp = client.post(
+        "/api/events",
+        json={
+            "title": "Delete Me",
+            "starts_at": (datetime.utcnow() + timedelta(days=2)).isoformat(),
+            "location": "Hall C",
+            "capacity": 10,
+            "price_cents": 0,
+            "category": "general",
+            "club_id": None,
+        },
+        headers=admin_headers,
+    )
+    event_id = event_resp.json()["id"]
+
+    student_headers = auth_headers("reggie@school.edu", "student")
+    reg_resp = client.post(
+        "/api/registrations",
+        json={"event_id": event_id},
+        headers=student_headers,
+    )
+    assert reg_resp.status_code == 200
+
+    delete_resp = client.delete(f"/api/events/{event_id}", headers=admin_headers)
+    assert delete_resp.status_code == 200
+
+    with TestingSessionLocal() as session:
+        assert session.get(models.Event, event_id) is None
+        remaining_regs = session.execute(
+            select(models.Registration).where(models.Registration.event_id == event_id)
+        ).scalars().all()
+        assert remaining_regs == []
+
+
 def test_successful_registration_and_duplicate_registration(client):
     admin_headers = auth_headers("admin@school.edu", "admin")
     event_resp = client.post(
@@ -527,3 +563,18 @@ def test_flag_creation_listing_and_resolution(client):
     list_after = client.get("/api/admin/flags", headers=admin_headers)
     assert list_after.status_code == 200
     assert all(f["id"] != created_flag["id"] for f in list_after.json())
+
+
+def test_flags_list_requires_admin_role(client):
+    with TestingSessionLocal() as session:
+        event = session.execute(select(models.Event)).scalars().first()
+        assert event is not None
+    create_resp = client.post(
+        "/api/flags",
+        json={"item_type": "event", "item_id": event.id, "reason": "spam"},
+        headers=auth_headers("student@school.edu", "student"),
+    )
+    assert create_resp.status_code == 200
+
+    list_resp = client.get("/api/admin/flags", headers=auth_headers("student@school.edu", "student"))
+    assert list_resp.status_code == 403
