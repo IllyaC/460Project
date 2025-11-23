@@ -392,6 +392,21 @@
           </div>
           <button onclick="loadAdminClubsOverview()">Load All Clubs</button>
         </div>
+        <div class="filter-grid admin-filter-grid">
+          <label>Status
+            <select id="admin_filter_status">
+              <option value="">Any status</option>
+              <option value="approved">Approved</option>
+              <option value="pending">Pending</option>
+            </select>
+          </label>
+          <label>Category
+            <input id="admin_filter_category" type="text" placeholder="e.g., sports, tech">
+          </label>
+          <label>Search name
+            <input id="admin_filter_search" type="search" placeholder="Club name contains">
+          </label>
+        </div>
         <div class="table-wrapper">
           <table class="admin-table">
             <thead>

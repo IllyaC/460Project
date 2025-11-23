@@ -285,6 +285,65 @@ def test_admin_clubs_overview(client):
     )
     assert non_admin_resp.status_code == 403
 
+
+def test_admin_clubs_overview_filters_are_optional(client):
+    admin_headers = auth_headers("admin@school.edu", "admin")
+    with TestingSessionLocal() as session:
+        sports_pending = models.Club(
+            name="Admin Filter Sports Pending",
+            description="Sports club awaiting approval",
+            approved=False,
+            category="sports",
+            created_by_email="leader@school.edu",
+        )
+        sports_approved = models.Club(
+            name="Admin Filter Sports Approved",
+            description="Approved sports club",
+            approved=True,
+            category="sports",
+            created_by_email="leader@school.edu",
+        )
+        tech_approved = models.Club(
+            name="Admin Filter Tech",
+            description="Approved tech club",
+            approved=True,
+            category="tech",
+            created_by_email="leader@school.edu",
+        )
+        session.add_all([sports_pending, sports_approved, tech_approved])
+        session.commit()
+
+        sports_pending_id = sports_pending.id
+        sports_approved_id = sports_approved.id
+        tech_approved_id = tech_approved.id
+
+    no_filter_resp = client.get(
+        "/api/admin/clubs/overview", headers=admin_headers
+    )
+    assert no_filter_resp.status_code == 200
+    all_ids = {club["id"] for club in no_filter_resp.json()}
+    assert {sports_pending_id, sports_approved_id, tech_approved_id}.issubset(all_ids)
+
+    category_only_resp = client.get(
+        "/api/admin/clubs/overview",
+        headers=admin_headers,
+        params={"category": "sports"},
+    )
+    assert category_only_resp.status_code == 200
+    sports_ids = {club["id"] for club in category_only_resp.json()}
+    assert sports_pending_id in sports_ids
+    assert sports_approved_id in sports_ids
+    assert tech_approved_id not in sports_ids
+
+    combined_filters_resp = client.get(
+        "/api/admin/clubs/overview",
+        headers=admin_headers,
+        params={"category": "sports", "status": "pending", "search": "pending"},
+    )
+    assert combined_filters_resp.status_code == 200
+    combined_ids = {club["id"] for club in combined_filters_resp.json()}
+    assert combined_ids == {sports_pending_id}
+
 def test_list_events_basic(client):
     response = client.get("/api/events", headers=auth_headers("student1@school.edu", "student"))
     assert response.status_code == 200

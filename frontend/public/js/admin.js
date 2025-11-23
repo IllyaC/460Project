@@ -197,10 +197,27 @@ async function loadAdminClubsOverview(){
     setStatus("admin_club_overview_status", "Admin role required.", "error");
     return;
   }
+  const statusInput = document.getElementById("admin_filter_status");
+  const categoryInput = document.getElementById("admin_filter_category");
+  const searchInput = document.getElementById("admin_filter_search");
+  const filters = {};
+  const statusValue = (statusInput?.value || "").trim();
+  const categoryValue = (categoryInput?.value || "").trim();
+  const searchValue = (searchInput?.value || "").trim();
+
+  if(statusValue){
+    filters.status = statusValue;
+  }
+  if(categoryValue){
+    filters.category = categoryValue;
+  }
+  if(searchValue){
+    filters.search = searchValue;
+  }
   const tbody = document.getElementById("admin_club_overview_tbody");
   tbody.innerHTML = "";
   try {
-    const res = await apiGetAdminClubsOverview();
+    const res = await apiGetAdminClubsOverview(filters);
     if(res.status === 403){
       setStatus("admin_club_overview_status", "Admin role required.", "error");
       tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Admin role required.</td></tr>';

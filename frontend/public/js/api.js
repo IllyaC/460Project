@@ -184,6 +184,16 @@ function apiApproveLeader(id){
   });
 }
 
-function apiGetAdminClubsOverview(){
-  return fetch(`${API}/admin/clubs/overview`, { headers: buildHeaders(false) });
+function apiGetAdminClubsOverview(filters = {}){
+  const params = new URLSearchParams();
+  Object.entries(filters || {}).forEach(([key, value]) => {
+    if(value === undefined || value === null){ return; }
+    const trimmed = `${value}`.trim();
+    if(trimmed){
+      params.append(key, trimmed);
+    }
+  });
+  const query = params.toString();
+  const suffix = query ? `?${query}` : "";
+  return fetch(`${API}/admin/clubs/overview${suffix}`, { headers: buildHeaders(false) });
 }
