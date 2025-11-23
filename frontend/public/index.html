@@ -70,123 +70,89 @@
         <p>Search for something to attend, or add something new to the calendar.</p>
       </div>
     </div>
-    <div class="row card-grid">
-      <div class="panel filter-panel">
-        <div class="section-header compact">
-          <div>
-            <p class="eyebrow">Find Events</p>
-            <h3>Search & Filter</h3>
-            <p class="hint">Dial in the dates, categories, and locations to find the right fit.</p>
-          </div>
-          <button type="button" class="btn-ghost" onclick="loadTrending()">Trending</button>
+    <div id="events_search_section" class="panel filter-panel events-section">
+      <div class="section-header compact">
+        <div>
+          <p class="eyebrow">Find Events</p>
+          <h3>Search & Filter</h3>
+          <p class="hint">Dial in the dates, categories, and locations to find the right fit.</p>
         </div>
-        <div class="filter-grid">
-          <div class="filter-cluster">
-            <p class="cluster-label">Dates</p>
-            <div class="datetime-filter">
-              <p class="hint">Starts after</p>
-              <div class="datetime-group">
-                <label>Date <input type="date" id="filter_start_date"></label>
-                <div class="time-fields">
-                  <label>Hour <input type="number" id="filter_start_hour" min="1" max="12" placeholder="HH"></label>
-                  <span class="time-separator">:</span>
-                  <label>Minute <input type="number" id="filter_start_minute" min="0" max="59" placeholder="MM"></label>
-                  <label class="ampm-select">AM/PM
-                    <select id="filter_start_ampm">
-                      <option value="">--</option>
-                      <option value="AM">AM</option>
-                      <option value="PM">PM</option>
-                    </select>
-                  </label>
-                </div>
-              </div>
-            </div>
-            <div class="datetime-filter">
-              <p class="hint">Ends before</p>
-              <div class="datetime-group">
-                <label>Date <input type="date" id="filter_end_date"></label>
-                <div class="time-fields">
-                  <label>Hour <input type="number" id="filter_end_hour" min="1" max="12" placeholder="HH"></label>
-                  <span class="time-separator">:</span>
-                  <label>Minute <input type="number" id="filter_end_minute" min="0" max="59" placeholder="MM"></label>
-                  <label class="ampm-select">AM/PM
-                    <select id="filter_end_ampm">
-                      <option value="">--</option>
-                      <option value="AM">AM</option>
-                      <option value="PM">PM</option>
-                    </select>
-                  </label>
-                </div>
+        <button type="button" class="btn-ghost" onclick="loadTrending()">Trending</button>
+      </div>
+      <div class="filter-grid">
+        <div class="filter-cluster">
+          <p class="cluster-label">Dates</p>
+          <div class="datetime-filter">
+            <p class="hint">Starts after</p>
+            <div class="datetime-group">
+              <label>Date <input type="date" id="filter_start_date"></label>
+              <div class="time-fields">
+                <label>Hour <input type="number" id="filter_start_hour" min="1" max="12" placeholder="HH"></label>
+                <span class="time-separator">:</span>
+                <label>Minute <input type="number" id="filter_start_minute" min="0" max="59" placeholder="MM"></label>
+                <label class="ampm-select">AM/PM
+                  <select id="filter_start_ampm">
+                    <option value="">--</option>
+                    <option value="AM">AM</option>
+                    <option value="PM">PM</option>
+                  </select>
+                </label>
               </div>
             </div>
           </div>
-          <div class="filter-cluster">
-            <p class="cluster-label">Details</p>
-            <label>Category
-              <select id="filter_category">
-                <option value="">Any Category</option>
-                <option value="music">Music</option>
-                <option value="tech">Tech</option>
-                <option value="sports">Sports</option>
-                <option value="social">Social</option>
-                <option value="career">Career</option>
-                <option value="other">Other</option>
-              </select>
-            </label>
-            <label>Title contains <input id="filter_title" placeholder="Workshop, social, meetup"></label>
-            <label>Location contains <input id="filter_location" placeholder="Student Union, ENG, etc."></label>
-          </div>
-          <div class="filter-cluster">
-            <p class="cluster-label">Preferences</p>
-            <label class="checkbox-inline"><input type="checkbox" id="filter_free"> Free events only</label>
-            <label>Sort by
-              <select id="filter_sort">
-                <option value="date">Date</option>
-                <option value="popularity">Popularity</option>
-              </select>
-            </label>
+          <div class="datetime-filter">
+            <p class="hint">Ends before</p>
+            <div class="datetime-group">
+              <label>Date <input type="date" id="filter_end_date"></label>
+              <div class="time-fields">
+                <label>Hour <input type="number" id="filter_end_hour" min="1" max="12" placeholder="HH"></label>
+                <span class="time-separator">:</span>
+                <label>Minute <input type="number" id="filter_end_minute" min="0" max="59" placeholder="MM"></label>
+                <label class="ampm-select">AM/PM
+                  <select id="filter_end_ampm">
+                    <option value="">--</option>
+                    <option value="AM">AM</option>
+                    <option value="PM">PM</option>
+                  </select>
+                </label>
+              </div>
+            </div>
           </div>
         </div>
-        <div class="button-row">
-          <button type="button" class="btn-primary" onclick="loadEvents()">Search</button>
-          <button type="button" class="btn-secondary" onclick="resetFilters()">Reset Filters</button>
-          <button type="button" class="btn-ghost" onclick="loadTrending()">See Trending</button>
+        <div class="filter-cluster">
+          <p class="cluster-label">Details</p>
+          <label>Category
+            <select id="filter_category">
+              <option value="">Any Category</option>
+              <option value="music">Music</option>
+              <option value="tech">Tech</option>
+              <option value="sports">Sports</option>
+              <option value="social">Social</option>
+              <option value="career">Career</option>
+              <option value="other">Other</option>
+            </select>
+          </label>
+          <label>Title contains <input id="filter_title" placeholder="Workshop, social, meetup"></label>
+          <label>Location contains <input id="filter_location" placeholder="Student Union, ENG, etc."></label>
+        </div>
+        <div class="filter-cluster">
+          <p class="cluster-label">Preferences</p>
+          <label class="checkbox-inline"><input type="checkbox" id="filter_free"> Free events only</label>
+          <label>Sort by
+            <select id="filter_sort">
+              <option value="date">Date</option>
+              <option value="popularity">Popularity</option>
+            </select>
+          </label>
         </div>
       </div>
-      <div class="panel">
-        <h3>Create Event</h3>
-        <p class="hint">Share a meetup, workshop, or social and put it on the radar.</p>
-        <label>Title <input id="event_title" placeholder="Workshop title"></label>
-        <div class="datetime-field">
-          <span class="datetime-title">Starts At</span>
-          <div class="datetime-group">
-            <label>Date <input type="date" id="event_start_date"></label>
-            <div class="time-fields">
-              <label class="sr-only" for="event_start_hour">Hour</label>
-              <input type="number" id="event_start_hour" min="1" max="12" placeholder="HH">
-              <span class="time-separator">:</span>
-              <label class="sr-only" for="event_start_minute">Minute</label>
-              <input type="number" id="event_start_minute" min="0" max="59" placeholder="MM">
-              <label class="sr-only" for="event_start_ampm">AM or PM</label>
-              <select id="event_start_ampm">
-                <option value="">AM/PM</option>
-                <option value="AM">AM</option>
-                <option value="PM">PM</option>
-              </select>
-            </div>
-          </div>
-        </div>
-        <label>Location <input id="event_location" placeholder="Student Union"></label>
-        <label>Capacity <input type="number" id="event_capacity" placeholder="25"></label>
-        <label>Price (cents) <input type="number" id="event_price" placeholder="0"></label>
-        <label>Category <input id="event_category" placeholder="tech, music, etc."></label>
-        <label>Club ID (optional) <input type="number" id="event_club" placeholder="123"></label>
-        <div class="button-row">
-          <button onclick="createEvent()">Create Event</button>
-        </div>
+      <div class="button-row">
+        <button type="button" class="btn-primary" onclick="loadEvents()">Search</button>
+        <button type="button" class="btn-secondary" onclick="resetFilters()">Reset Filters</button>
+        <button type="button" class="btn-ghost" onclick="loadTrending()">See Trending</button>
       </div>
     </div>
-    <div class="panel table-panel">
+    <div id="events_results_section" class="panel table-panel events-section">
       <div class="section-header compact">
         <div>
           <p class="eyebrow">Results</p>
@@ -196,7 +162,39 @@
       </div>
       <div id="events_list" class="event-list" aria-live="polite"></div>
     </div>
-    <div class="panel">
+    <div id="events_create_section" class="panel events-section">
+      <h3>Create an Event</h3>
+      <p class="hint">Share a meetup, workshop, or social and put it on the radar.</p>
+      <label>Title <input id="event_title" placeholder="Workshop title"></label>
+      <div class="datetime-field">
+        <span class="datetime-title">Starts At</span>
+        <div class="datetime-group">
+          <label>Date <input type="date" id="event_start_date"></label>
+          <div class="time-fields">
+            <label class="sr-only" for="event_start_hour">Hour</label>
+            <input type="number" id="event_start_hour" min="1" max="12" placeholder="HH">
+            <span class="time-separator">:</span>
+            <label class="sr-only" for="event_start_minute">Minute</label>
+            <input type="number" id="event_start_minute" min="0" max="59" placeholder="MM">
+            <label class="sr-only" for="event_start_ampm">AM or PM</label>
+            <select id="event_start_ampm">
+              <option value="">AM/PM</option>
+              <option value="AM">AM</option>
+              <option value="PM">PM</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <label>Location <input id="event_location" placeholder="Student Union"></label>
+      <label>Capacity <input type="number" id="event_capacity" placeholder="25"></label>
+      <label>Price (cents) <input type="number" id="event_price" placeholder="0"></label>
+      <label>Category <input id="event_category" placeholder="tech, music, etc."></label>
+      <label>Club ID (optional) <input type="number" id="event_club" placeholder="123"></label>
+      <div class="button-row">
+        <button onclick="createEvent()">Create Event</button>
+      </div>
+    </div>
+    <div class="panel events-section">
       <div class="section-header compact">
         <div>
           <p class="eyebrow">Now Popular</p>
