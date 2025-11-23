@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ..deps import ensure_admin, get_db, get_user, UserContext
-from ..models import Club, ClubMember, Flag
+from ..deps import ensure_admin, get_db, get_user
+from ..models import Club, ClubMember, Flag, User
 from ..schemas import ClubSummary, FlagOut
 from ..services import club_summary, serialize_flag
 
@@ -13,7 +13,7 @@ router = APIRouter()
 @router.get("/api/admin/flags", response_model=list[FlagOut])
 def list_flags(
     db: Session = Depends(get_db),
-    user: UserContext = Depends(get_user),
+    user: User = Depends(get_user),
 ):
     ensure_admin(user)
     flags = (
@@ -32,7 +32,7 @@ def list_flags(
 def resolve_flag(
     flag_id: int,
     db: Session = Depends(get_db),
-    user: UserContext = Depends(get_user),
+    user: User = Depends(get_user),
 ):
     ensure_admin(user)
     flag = db.get(Flag, flag_id)
@@ -47,7 +47,7 @@ def resolve_flag(
 @router.get("/api/admin/clubs/pending", response_model=list[ClubSummary])
 def pending_clubs(
     db: Session = Depends(get_db),
-    user: UserContext = Depends(get_user),
+    user: User = Depends(get_user),
 ):
     ensure_admin(user)
     clubs = (
@@ -62,7 +62,7 @@ def pending_clubs(
 def approve_club(
     club_id: int,
     db: Session = Depends(get_db),
-    user: UserContext = Depends(get_user),
+    user: User = Depends(get_user),
 ):
     ensure_admin(user)
     club = db.get(Club, club_id)
