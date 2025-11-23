@@ -261,6 +261,20 @@ ul {
   color: var(--ink);
 }
 
+.status {
+  min-height: 1.2em;
+  margin: 8px 0 4px;
+  font-weight: 600;
+}
+
+.status.success {
+  color: #047857;
+}
+
+.status.error {
+  color: #b91c1c;
+}
+
 @media (max-width: 720px) {
   body {
     padding: 24px 16px 32px;
