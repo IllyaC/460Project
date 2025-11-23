@@ -296,9 +296,11 @@ async function postAnnouncement(){
 
 async function createClubEvent(){
   if(!loadedClubId){ setStatus('club_detail_status', 'Load a club first.', 'error'); return; }
+  const startsAt = requireDateTime("club_event_start", "club_detail_status");
+  if(!startsAt){ return; }
   const payload = {
     title: document.getElementById("club_event_title").value,
-    starts_at: document.getElementById("club_event_starts").value,
+    starts_at: startsAt,
     location: document.getElementById("club_event_location").value,
     capacity: Number(document.getElementById("club_event_capacity").value),
     price_cents: Number(document.getElementById("club_event_price").value),

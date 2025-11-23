@@ -1,7 +1,48 @@
-function isoPlusDays(days){
-  const dt = new Date(Date.now() + days * 86400000);
-  dt.setSeconds(0,0);
-  return dt.toISOString();
+function buildIsoString(dateStr, hourStr, minuteStr, ampm){
+  if(!dateStr){ return null; }
+  if(ampm !== "AM" && ampm !== "PM"){ return null; }
+  const hour = Number(hourStr);
+  const minute = Number(minuteStr);
+  if(Number.isNaN(hour) || Number.isNaN(minute)){ return null; }
+  if(hour < 1 || hour > 12 || minute < 0 || minute > 59){ return null; }
+  const [year, month, day] = dateStr.split("-").map(Number);
+  if([year, month, day].some(num => Number.isNaN(num))){ return null; }
+
+  let hour24 = hour % 12;
+  if(ampm === "PM" && hour !== 12){
+    hour24 += 12;
+  } else if(ampm === "AM" && hour === 12){
+    hour24 = 0;
+  }
+
+  const iso = new Date(Date.UTC(year, month - 1, day, hour24, minute, 0, 0)).toISOString();
+  return iso;
+}
+
+function getSearchDateTime(prefix){
+  const date = document.getElementById(`${prefix}_date`)?.value;
+  const hour = document.getElementById(`${prefix}_hour`)?.value;
+  const minute = document.getElementById(`${prefix}_minute`)?.value;
+  const ampm = document.getElementById(`${prefix}_ampm`)?.value;
+  if(!date || !hour || !minute || !ampm){ return null; }
+  return buildIsoString(date, hour, minute, ampm);
+}
+
+function requireDateTime(prefix, statusTarget){
+  const date = document.getElementById(`${prefix}_date`)?.value;
+  const hour = document.getElementById(`${prefix}_hour`)?.value;
+  const minute = document.getElementById(`${prefix}_minute`)?.value;
+  const ampm = document.getElementById(`${prefix}_ampm`)?.value;
+  if(!date || !hour || !minute || !ampm){
+    setStatus(statusTarget, "Please provide a complete date, time, and AM/PM.", "error");
+    return null;
+  }
+  const iso = buildIsoString(date, hour, minute, ampm);
+  if(!iso){
+    setStatus(statusTarget, "Please enter a valid date and time.", "error");
+    return null;
+  }
+  return iso;
 }
 
 function formatPrice(cents){
@@ -77,9 +118,11 @@ function renderMyEvents(){
 }
 
 async function createEvent(){
+  const startsAt = requireDateTime("event_start", "events_status");
+  if(!startsAt){ return; }
   const payload = {
     title: document.getElementById("event_title").value,
-    starts_at: document.getElementById("event_starts").value,
+    starts_at: startsAt,
     location: document.getElementById("event_location").value,
     capacity: Number(document.getElementById("event_capacity").value),
     price_cents: Number(document.getElementById("event_price").value),
@@ -97,8 +140,14 @@ async function createEvent(){
 }
 
 function resetFilters(){
-  document.getElementById("filter_start").value = "";
-  document.getElementById("filter_end").value = "";
+  document.getElementById("filter_start_date").value = "";
+  document.getElementById("filter_start_hour").value = "";
+  document.getElementById("filter_start_minute").value = "";
+  document.getElementById("filter_start_ampm").value = "";
+  document.getElementById("filter_end_date").value = "";
+  document.getElementById("filter_end_hour").value = "";
+  document.getElementById("filter_end_minute").value = "";
+  document.getElementById("filter_end_ampm").value = "";
   document.getElementById("filter_category").value = "";
   document.getElementById("filter_title").value = "";
   document.getElementById("filter_location").value = "";
@@ -118,8 +167,8 @@ function canManageEvent(event){
 async function loadEvents(skipRegistrationSync = false){
   clearStatus("events_status");
   const params = new URLSearchParams();
-  const start = document.getElementById("filter_start").value;
-  const end = document.getElementById("filter_end").value;
+  const start = getSearchDateTime("filter_start");
+  const end = getSearchDateTime("filter_end");
   const category = document.getElementById("filter_category").value;
   const title = document.getElementById("filter_title").value;
   const location = document.getElementById("filter_location").value;
@@ -297,13 +346,3 @@ async function flagEvent(id){
   }
 }
 
-function setDefaultDateInputs(){
-  const eventStarts = document.getElementById("event_starts");
-  const clubEventStarts = document.getElementById("club_event_starts");
-  if(eventStarts){
-    eventStarts.value = isoPlusDays(2);
-  }
-  if(clubEventStarts){
-    clubEventStarts.value = isoPlusDays(5);
-  }
-}

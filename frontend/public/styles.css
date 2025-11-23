@@ -221,6 +221,55 @@ section {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
+.datetime-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.datetime-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.datetime-group label {
+  margin-top: 0;
+}
+
+.datetime-group input[type="date"] {
+  max-width: 240px;
+}
+
+.time-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.time-fields input,
+.time-fields select {
+  width: 90px;
+  max-width: none;
+}
+
+.time-separator {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.datetime-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.datetime-title {
+  font-weight: 700;
+  color: var(--ink);
+}
+
 .cluster-label {
   margin: 0 0 6px;
   font-size: 0.75rem;
