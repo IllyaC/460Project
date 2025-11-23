@@ -134,6 +134,7 @@ function startSession(){
     loadPendingClubs();
     loadPendingLeaders();
     loadFlags();
+    loadAdminClubsOverview();
   }
 }
 
@@ -143,12 +144,14 @@ function resetAppContent(){
   clearStatus("admin_status");
   clearStatus("pending_club_status");
   clearStatus("pending_leader_status");
+  clearStatus("admin_club_overview_status");
   document.getElementById("events_list").innerHTML = "";
   document.getElementById("trending_list").innerHTML = "";
   document.getElementById("club_list").innerHTML = "";
   document.getElementById("club_name").value = "";
   document.getElementById("club_desc").value = "";
   document.getElementById("club_detail").innerHTML = "";
+  document.getElementById("admin_club_overview_tbody").innerHTML = '<tr><td colspan="7" class="empty-state">Load all clubs to review their details.</td></tr>';
   document.getElementById("pending_club_tbody").innerHTML = '<tr><td colspan="4" class="empty-state">Load pending clubs to review submissions.</td></tr>';
   document.getElementById("pending_leader_tbody").innerHTML = '<tr><td colspan="3" class="empty-state">Load pending leaders to review requests.</td></tr>';
   document.getElementById("flagged_tbody").innerHTML = '<tr><td colspan="6" class="empty-state">Load flagged content to review reports.</td></tr>';

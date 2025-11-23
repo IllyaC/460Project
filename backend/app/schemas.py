@@ -89,6 +89,16 @@ class ClubSummary(BaseModel):
     membership_role: Optional[str] = None
 
 
+class AdminClubSummary(BaseModel):
+    id: int
+    name: str
+    approved: bool
+    category: Optional[str] = None
+    member_count: int
+    pending_member_count: int
+    upcoming_event_count: int
+
+
 class ClubMemberOut(BaseModel):
     user_email: str
     role: str

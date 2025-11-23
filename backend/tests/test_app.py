@@ -176,6 +176,115 @@ def test_admin_can_approve_pending_leader(client):
     assert pending_after.status_code == 200
     assert all(user["id"] != leader["id"] for user in pending_after.json())
 
+
+def test_admin_clubs_overview(client):
+    admin_headers = auth_headers("admin@school.edu", "admin")
+
+    with TestingSessionLocal() as session:
+        club_approved = models.Club(
+            name="Admin Oversight Approved",
+            description="Approved club for admin summary",
+            approved=True,
+            created_by_email="leader@school.edu",
+        )
+        club_pending = models.Club(
+            name="Admin Oversight Pending",
+            description="Pending club for admin summary",
+            approved=False,
+            created_by_email="leader@school.edu",
+        )
+        session.add_all([club_approved, club_pending])
+        session.flush()
+
+        session.add_all(
+            [
+                models.ClubMember(
+                    club_id=club_approved.id,
+                    user_email="member1@school.edu",
+                    role="member",
+                    status="approved",
+                ),
+                models.ClubMember(
+                    club_id=club_approved.id,
+                    user_email="member2@school.edu",
+                    role="member",
+                    status="approved",
+                ),
+                models.ClubMember(
+                    club_id=club_approved.id,
+                    user_email="pending1@school.edu",
+                    role="member",
+                    status="pending",
+                ),
+                models.ClubMember(
+                    club_id=club_pending.id,
+                    user_email="pending2@school.edu",
+                    role="member",
+                    status="pending",
+                ),
+            ]
+        )
+
+        session.add_all(
+            [
+                models.Event(
+                    club_id=club_approved.id,
+                    title="Future Admin Event",
+                    starts_at=datetime.utcnow() + timedelta(days=4),
+                    location="Hall Admin",
+                    capacity=20,
+                    price_cents=0,
+                    category="general",
+                ),
+                models.Event(
+                    club_id=club_approved.id,
+                    title="Past Admin Event",
+                    starts_at=datetime.utcnow() - timedelta(days=2),
+                    location="Hall Admin",
+                    capacity=20,
+                    price_cents=0,
+                    category="general",
+                ),
+                models.Event(
+                    club_id=club_pending.id,
+                    title="Pending Club Future Event",
+                    starts_at=datetime.utcnow() + timedelta(days=7),
+                    location="Pending Hall",
+                    capacity=15,
+                    price_cents=0,
+                    category="general",
+                ),
+            ]
+        )
+
+        session.commit()
+        approved_id = club_approved.id
+        pending_id = club_pending.id
+
+    overview_resp = client.get("/api/admin/clubs/overview", headers=admin_headers)
+    assert overview_resp.status_code == 200
+    overview = overview_resp.json()
+
+    approved_summary = next(
+        club for club in overview if club["id"] == approved_id
+    )
+    pending_summary = next(club for club in overview if club["id"] == pending_id)
+
+    assert approved_summary["approved"] is True
+    assert approved_summary["member_count"] == 2
+    assert approved_summary["pending_member_count"] == 1
+    assert approved_summary["upcoming_event_count"] == 1
+
+    assert pending_summary["approved"] is False
+    assert pending_summary["member_count"] == 0
+    assert pending_summary["pending_member_count"] == 1
+    assert pending_summary["upcoming_event_count"] == 1
+
+    non_admin_resp = client.get(
+        "/api/admin/clubs/overview", headers=auth_headers("student1@school.edu", "student")
+    )
+    assert non_admin_resp.status_code == 403
+
 def test_list_events_basic(client):
     response = client.get("/api/events", headers=auth_headers("student1@school.edu", "student"))
     assert response.status_code == 200

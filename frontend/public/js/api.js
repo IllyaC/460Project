@@ -183,3 +183,7 @@ function apiApproveLeader(id){
     headers: buildHeaders(false)
   });
 }
+
+function apiGetAdminClubsOverview(){
+  return fetch(`${API}/admin/clubs/overview`, { headers: buildHeaders(false) });
+}
