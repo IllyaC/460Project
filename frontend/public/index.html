@@ -34,7 +34,7 @@
           </select>
         </label>
         <button type="button" onclick="handleLogin()">Continue</button>
-        <p id="login_status" class="status" aria-live="polite"></p>
+        <div id="login_status" class="section-status status" aria-live="polite"></div>
       </div>
     </div>
   </section>
@@ -53,7 +53,7 @@
       <p class="eyebrow">Events</p>
       <div>
         <h2>Discover Events</h2>
-        <p id="events_status" class="status" aria-live="polite"></p>
+        <div id="events_status" class="section-status status" aria-live="polite"></div>
         <p>Search for something to attend, or add something new to the calendar.</p>
       </div>
     </div>
@@ -148,7 +148,7 @@
       <p class="eyebrow">Clubs</p>
       <div>
         <h2>Clubs Directory</h2>
-        <p id="clubs_status" class="status" aria-live="polite"></p>
+        <div id="clubs_status" class="section-status status" aria-live="polite"></div>
         <p>Browse campus groups, join a club, or manage your own.</p>
       </div>
     </div>
@@ -175,11 +175,11 @@
         <label>Name <input id="club_name" placeholder="Board Games"></label>
         <label>Description <textarea id="club_desc" placeholder="What does this club do?"></textarea></label>
         <button onclick="createClub()">Submit Club (pending approval)</button>
-        <p id="club_create_result" class="status" aria-live="polite"></p>
+        <div id="club_create_result" class="section-status status" aria-live="polite"></div>
         <h4>Join a club</h4>
         <label>Club ID <input type="number" id="join_club_id"></label>
         <button onclick="joinClub()">Request to Join</button>
-        <p id="club_join_result" class="status" aria-live="polite"></p>
+        <div id="club_join_result" class="section-status status" aria-live="polite"></div>
       </div>
     </div>
 
@@ -194,7 +194,7 @@
           <button onclick="loadClubDetail()">Load Club</button>
         </div>
       </div>
-      <p id="club_detail_status" class="status" aria-live="polite"></p>
+      <div id="club_detail_status" class="section-status status" aria-live="polite"></div>
       <div id="club_detail" class="club-detail"></div>
 
       <div id="leader_dashboard" class="leader-dashboard leader-only hidden">
@@ -298,7 +298,7 @@
       <p class="eyebrow">Admin</p>
       <div>
         <h2>Admin Dashboard</h2>
-        <p id="admin_status" class="status" aria-live="polite"></p>
+        <div id="admin_status" class="section-status status" aria-live="polite"></div>
         <p>Approve clubs, monitor flags, and keep the platform tidy.</p>
       </div>
     </div>
@@ -321,7 +321,7 @@
             </tbody>
           </table>
         </div>
-        <p id="pending_club_status" class="status" aria-live="polite"></p>
+        <div id="pending_club_status" class="section-status status" aria-live="polite"></div>
       </div>
       <div class="panel admin-panel">
         <div class="section-header compact">
@@ -360,15 +360,24 @@
   let personaEmail = "";
   let personaRole = "";
 
-  function setStatus(id, message, type = "info"){
-    const el = document.getElementById(id);
+  function getStatusElement(sectionId){
+    return document.getElementById(sectionId) || document.getElementById(`${sectionId}_status`);
+  }
+
+  function showStatus(sectionId, message, type = "info"){
+    const el = getStatusElement(sectionId);
     if(!el){ return; }
     el.textContent = message;
-    el.className = `status ${type}`;
+    el.className = `section-status status ${type}`;
+    el.classList.toggle("visible", Boolean(message));
+  }
+
+  function setStatus(id, message, type = "info"){
+    showStatus(id, message, type);
   }
 
   function clearStatus(id){
-    setStatus(id, "");
+    showStatus(id, "");
   }
 
   async function readJson(res){
@@ -398,6 +407,39 @@
 
   document.getElementById("event_starts").value = isoPlusDays(2);
   document.getElementById("club_event_starts").value = isoPlusDays(5);
+
+  function normalizeDetail(body){
+    const detail = body?.detail || body?.error || body?.message;
+    return typeof detail === "string" ? detail.toLowerCase() : "";
+  }
+
+  function buildJoinClubMessage(res, body){
+    const detail = normalizeDetail(body);
+    if(res.ok){
+      return { message: "You joined this club.", type: "success" };
+    }
+    if(detail.includes("already") && detail.includes("member")){
+      return { message: "You’re already a member of this club.", type: "info" };
+    }
+    if(detail.includes("pending")){
+      return { message: "Your join request is pending approval.", type: "info" };
+    }
+    return { message: "We couldn’t process your join request right now.", type: "error" };
+  }
+
+  function buildRegistrationMessage(res, body){
+    const detail = normalizeDetail(body);
+    if(res.ok){
+      return { message: "Registration successful.", type: "success" };
+    }
+    if(detail.includes("already") && detail.includes("registered")){
+      return { message: "You’re already registered for this event.", type: "info" };
+    }
+    if(detail.includes("full")){
+      return { message: "This event is full.", type: "error" };
+    }
+    return { message: "Unable to register for this event right now.", type: "error" };
+  }
 
   function updateUserSummary(){
     const summary = document.getElementById("user_summary");
@@ -730,11 +772,8 @@
       body: JSON.stringify({event_id: eventId})
     });
     const body = await readJson(res);
-    if(res.ok){
-      setStatus("events_status", "Registered for event!", "success");
-    } else {
-      setStatus("events_status", `Register failed: ${buildErrorMessage(res, body)}`, "error");
-    }
+    const { message, type } = buildRegistrationMessage(res, body);
+    showStatus("events_status", message, type);
     await fetchMyRegistrations(true);
     await loadEvents(true);
   }
@@ -744,12 +783,9 @@
       method: "DELETE",
       headers: buildHeaders(false)
     });
-    const body = await readJson(res);
-    if(res.ok){
-      setStatus("events_status", "You are no longer registered for this event.", "success");
-    } else {
-      setStatus("events_status", `Unregister failed: ${buildErrorMessage(res, body)}`, "error");
-    }
+    const message = res.ok ? "You are no longer registered for this event." : "We couldn’t update your registration right now.";
+    const type = res.ok ? "success" : "error";
+    showStatus("events_status", message, type);
     await fetchMyRegistrations(true);
     await loadEvents(true);
   }
@@ -888,14 +924,11 @@
       headers: buildHeaders(true),
       body: JSON.stringify(payload)
     });
-    const body = await readJson(res);
-    if(res.ok){
-      setStatus("clubs_status", "Club submitted for approval.", "success");
-      document.getElementById("club_create_result").textContent = "Your club was submitted and is awaiting review.";
-    } else {
-      setStatus("clubs_status", `Create club failed: ${buildErrorMessage(res, body)}`, "error");
-      document.getElementById("club_create_result").textContent = "Unable to submit club right now.";
-    }
+    const clubMessage = res.ok
+      ? { message: "Your club was submitted and is awaiting review.", type: "success" }
+      : { message: "Unable to submit club right now.", type: "error" };
+    showStatus("clubs_status", clubMessage.message, clubMessage.type);
+    showStatus("club_create_result", clubMessage.message, clubMessage.type);
     if(personaRole === "admin"){
       loadPendingClubs();
     }
@@ -908,20 +941,10 @@
       method: "POST",
       headers: buildHeaders(true)
     });
-    const body = await res.json();
-    const joinStatus = document.getElementById("club_join_result");
-    if(res.ok){
-      setStatus("clubs_status", "Join request sent.", "success");
-      joinStatus.textContent = "Your join request was submitted.";
-      joinStatus.classList.remove("error");
-      joinStatus.classList.add("success");
-    } else {
-      const message = `Join request failed: ${buildErrorMessage(res, body)}`;
-      setStatus("clubs_status", message, "error");
-      joinStatus.textContent = message;
-      joinStatus.classList.remove("success");
-      joinStatus.classList.add("error");
-    }
+    const body = await readJson(res);
+    const joinMessage = buildJoinClubMessage(res, body);
+    showStatus("clubs_status", joinMessage.message, joinMessage.type);
+    showStatus("club_join_result", joinMessage.message, joinMessage.type);
     await loadClubs();
     await loadMyClubs();
   }
@@ -932,20 +955,11 @@
       method: "POST",
       headers: buildHeaders(true)
     });
-    const body = await res.json();
-    const joinStatus = document.getElementById("club_join_result");
-    if(res.ok){
-      setStatus("clubs_status", "Left club.", "success");
-      joinStatus.textContent = "You have left the club.";
-      joinStatus.classList.remove("error");
-      joinStatus.classList.add("success");
-    } else {
-      const message = `Leave failed: ${buildErrorMessage(res, body)}`;
-      setStatus("clubs_status", message, "error");
-      joinStatus.textContent = message;
-      joinStatus.classList.remove("success");
-      joinStatus.classList.add("error");
-    }
+    const leaveMessage = res.ok
+      ? { message: "You have left the club.", type: "success" }
+      : { message: "We couldn’t update your club membership right now.", type: "error" };
+    showStatus("clubs_status", leaveMessage.message, leaveMessage.type);
+    showStatus("club_join_result", leaveMessage.message, leaveMessage.type);
     await loadClubs();
     await loadMyClubs();
   }

@@ -799,21 +799,36 @@ ul {
   color: var(--ink);
 }
 
-.content-section .status {
-  margin: 0;
+.content-section .section-status {
+  margin-top: 0;
 }
 
-.status {
-  min-height: 1.2em;
+.section-status {
+  display: none;
   margin: 8px 0 4px;
+  padding: 10px 12px;
+  border-radius: 10px;
   font-weight: 600;
+  background: #f3f4f6;
+  color: var(--ink);
 }
 
-.status.success {
-  color: #047857;
+.section-status.visible {
+  display: block;
 }
 
-.status.error {
+.section-status.info {
+  background: #eef2ff;
+  color: #3730a3;
+}
+
+.section-status.success {
+  background: #ecfdf3;
+  color: #065f46;
+}
+
+.section-status.error {
+  background: #fef2f2;
   color: #b91c1c;
 }
 
