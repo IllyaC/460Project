@@ -1,5 +1,5 @@
 async function loadFlags(){
-  if(personaRole !== "admin"){
+  if(currentUser()?.role !== "admin"){
     setStatus("admin_status", "Admin role required.", "error");
     return;
   }
@@ -46,7 +46,7 @@ async function loadFlags(){
 }
 
 async function resolveFlag(id){
-  if(personaRole !== "admin"){
+  if(currentUser()?.role !== "admin"){
     setStatus("admin_status", "Admin role required.", "error");
     return;
   }
@@ -61,7 +61,7 @@ async function resolveFlag(id){
 }
 
 async function loadPendingClubs(){
-  if(personaRole !== "admin"){
+  if(currentUser()?.role !== "admin"){
     setStatus("pending_club_status", "Admin role required.", "error");
     return;
   }
@@ -106,7 +106,7 @@ async function loadPendingClubs(){
 }
 
 async function approveClub(idOverride){
-  if(personaRole !== "admin"){
+  if(currentUser()?.role !== "admin"){
     setStatus("pending_club_status", "Admin role required.", "error");
     return;
   }
@@ -127,7 +127,7 @@ async function approveClub(idOverride){
 }
 
 async function loadPendingLeaders(){
-  if(personaRole !== "admin"){
+  if(currentUser()?.role !== "admin"){
     setStatus("pending_leader_status", "Admin role required.", "error");
     return;
   }
@@ -173,7 +173,7 @@ async function loadPendingLeaders(){
 }
 
 async function approveLeader(idOverride){
-  if(personaRole !== "admin"){
+  if(currentUser()?.role !== "admin"){
     setStatus("pending_leader_status", "Admin role required.", "error");
     return;
   }

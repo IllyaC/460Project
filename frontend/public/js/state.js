@@ -5,21 +5,15 @@ let clubMemberships = new Map();
 let clubRoles = new Map();
 let allClubs = [];
 let myClubs = [];
-let personaName = "";
-let personaEmail = "";
-let personaRole = "";
+let userProfile = null;
 const sectionGroups = ["events", "clubs", "mystuff", "admin"];
 
-function setPersona(name, email, role){
-  personaName = name;
-  personaEmail = email;
-  personaRole = role;
+function setUser(profile){
+  userProfile = profile ? { ...profile } : null;
 }
 
-function resetPersona(){
-  personaName = "";
-  personaEmail = "";
-  personaRole = "";
+function resetUser(){
+  userProfile = null;
 }
 
 function resetSharedState(){
@@ -32,11 +26,8 @@ function resetSharedState(){
   myClubs = [];
 }
 
-function currentPersona(){
-  return {
-    email: personaEmail,
-    role: personaRole
-  };
+function currentUser(){
+  return userProfile;
 }
 
 function getSectionGroups(){

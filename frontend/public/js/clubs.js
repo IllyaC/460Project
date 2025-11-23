@@ -151,7 +151,7 @@ async function createClub(){
       if(nameInput){ nameInput.value = ""; }
       if(descInput){ descInput.value = ""; }
       await loadClubs();
-      if(personaRole === "admin"){
+      if(currentUser()?.role === "admin"){
         await loadPendingClubs();
       }
     } else {
@@ -240,9 +240,9 @@ async function loadClubDetail(){
     const date = new Date(a.created_at).toLocaleDateString();
     return `<li class="announcement-row"><span class="announcement-date">${date}</span> <strong>${a.title}</strong> — ${a.body} <button class="btn-ghost" onclick=\"flagAnnouncement(${a.id})\">Flag Content</button></li>`;
   }).join('');
-  const persona = currentPersona();
-  const isClubLeader = data.members.some(m => m.user_email === persona.email && m.role === "leader" && m.status === "approved");
-  const canManageClubEvents = persona.role === "admin" || isClubLeader;
+  const user = currentUser();
+  const isClubLeader = data.members.some(m => m.user_email === user?.email && m.role === "leader" && m.status === "approved");
+  const canManageClubEvents = user?.role === "admin" || (user?.role === "leader" && user?.is_approved && isClubLeader);
   const events = data.events
     .map(ev => {
       const deleteBtn = canManageClubEvents ? ` <button class="btn-ghost" onclick="deleteEvent(${ev.id})">Delete</button>` : '';
@@ -300,7 +300,7 @@ async function loadClubDetail(){
 
   const leaderDashboard = document.getElementById("leader_dashboard");
   if(leaderDashboard){
-    const shouldShowLeaderTools = persona.role === "admin" || isClubLeader;
+    const shouldShowLeaderTools = user?.role === "admin" || (user?.role === "leader" && user?.is_approved && isClubLeader);
     leaderDashboard.classList.toggle("hidden", !shouldShowLeaderTools);
   }
 }
