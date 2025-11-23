@@ -129,14 +129,38 @@ async function createEvent(){
     category: document.getElementById("event_category").value,
     club_id: document.getElementById("event_club").value ? Number(document.getElementById("event_club").value) : null
   };
-  const res = await apiCreateEvent(payload);
+  let res;
+  try {
+    res = await apiCreateEvent(payload);
+  } catch (err){
+    console.error("Create event failed", err);
+    setStatus("events_status", "Unable to create event right now.", "error");
+    return;
+  }
   const body = await readJson(res);
   if(res.ok){
     setStatus("events_status", "Event created successfully.", "success");
+    document.getElementById("event_title").value = "";
+    document.getElementById("event_start_date").value = "";
+    document.getElementById("event_start_hour").value = "";
+    document.getElementById("event_start_minute").value = "";
+    document.getElementById("event_start_ampm").value = "";
+    document.getElementById("event_location").value = "";
+    document.getElementById("event_capacity").value = "";
+    document.getElementById("event_price").value = "";
+    document.getElementById("event_category").value = "";
+    document.getElementById("event_club").value = "";
+    await loadEvents();
+    if(loadedClubId){
+      await loadClubDetail();
+    }
   } else {
-    setStatus("events_status", `Create event failed: ${buildErrorMessage(res, body)}`, "error");
+    const message = res.status === 403
+      ? "Only leaders and admins can create events. Your account doesn’t have permission."
+      : `Create event failed: ${buildErrorMessage(res, body)}`;
+    console.error("Create event failed", { status: res.status, body });
+    setStatus("events_status", message, "error");
   }
-  loadEvents();
 }
 
 function resetFilters(){

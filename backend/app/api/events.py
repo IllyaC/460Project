@@ -5,8 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
-from ..deps import ensure_admin, ensure_leader, get_db, get_user
-from ..models import Event, Registration, User
+from ..deps import ensure_admin, ensure_leader, ensure_leader_or_admin, get_db, get_user
+from ..models import Club, Event, Registration, User
 from ..schemas import EventCreate, EventOut, RegistrationCreate, RegistrationOut
 from ..services import base_event_query, serialize_event
 
@@ -17,10 +17,16 @@ router = APIRouter()
 def create_event(
     payload: EventCreate,
     db: Session = Depends(get_db),
-    user: User = Depends(get_user),
+    user: User = Depends(ensure_leader_or_admin),
 ):
-    if payload.club_id:
-        ensure_leader(db, payload.club_id, user)
+    if payload.club_id is not None:
+        club = db.get(Club, payload.club_id)
+        if not club:
+            raise HTTPException(status_code=404, detail="Club not found")
+        if user.role != "admin":
+            ensure_leader(db, payload.club_id, user)
+    elif user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can create campus-wide events")
     event = Event(**payload.model_dump())
     db.add(event)
     db.flush()
