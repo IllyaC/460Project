@@ -389,6 +389,26 @@
       <div class="panel admin-panel">
         <div class="section-header compact">
           <div>
+            <h3>All Clubs Overview</h3>
+            <p class="hint">See every club’s status, members, and upcoming events.</p>
+          </div>
+          <button onclick="loadAdminClubsOverview()">Load All Clubs</button>
+        </div>
+        <div class="table-wrapper">
+          <table class="admin-table">
+            <thead>
+              <tr><th>Club</th><th>Category</th><th>Status</th><th>Members</th><th>Pending</th><th>Upcoming</th><th>Action</th></tr>
+            </thead>
+            <tbody id="admin_club_overview_tbody">
+              <tr><td colspan="7" class="empty-state">Load all clubs to review their details.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div id="admin_club_overview_status" class="section-status status" aria-live="polite"></div>
+      </div>
+      <div class="panel admin-panel">
+        <div class="section-header compact">
+          <div>
             <h3>Pending Clubs</h3>
             <p class="hint">Review and approve new submissions.</p>
           </div>

@@ -191,3 +191,67 @@ async function approveLeader(idOverride){
   }
   loadPendingLeaders();
 }
+
+async function loadAdminClubsOverview(){
+  if(currentUser()?.role !== "admin"){
+    setStatus("admin_club_overview_status", "Admin role required.", "error");
+    return;
+  }
+  const tbody = document.getElementById("admin_club_overview_tbody");
+  tbody.innerHTML = "";
+  try {
+    const res = await apiGetAdminClubsOverview();
+    if(res.status === 403){
+      setStatus("admin_club_overview_status", "Admin role required.", "error");
+      tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Admin role required.</td></tr>';
+      return;
+    }
+    if(!res.ok){
+      const body = await readJson(res);
+      setStatus("admin_club_overview_status", `Failed to load clubs: ${buildErrorMessage(res, body)}`, "error");
+      tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Unable to load clubs overview.</td></tr>';
+      return;
+    }
+    const data = await res.json();
+    if(data.length === 0){
+      tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No clubs found.</td></tr>';
+      clearStatus("admin_club_overview_status");
+      return;
+    }
+    clearStatus("admin_club_overview_status");
+    data.forEach(club => {
+      const categoryLabel = club.category ? club.category : "General";
+      const statusLabel = club.approved ? "Approved" : "Pending Approval";
+      const memberCopy = club.member_count === 1 ? "member" : "members";
+      const pendingCopy = club.pending_member_count === 1 ? "pending member" : "pending members";
+      const eventCopy = club.upcoming_event_count === 1 ? "upcoming event" : "upcoming events";
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+          <td>
+            <div class="table-title">${club.name}</div>
+            <div class="muted">ID ${club.id}</div>
+          </td>
+          <td>${categoryLabel}</td>
+          <td><span class="pill ${club.approved ? "pill-success" : "pill-muted"}">${statusLabel}</span></td>
+          <td>${club.member_count} ${memberCopy}</td>
+          <td>${club.pending_member_count} ${pendingCopy}</td>
+          <td>${club.upcoming_event_count} ${eventCopy}</td>
+          <td><button class="btn-secondary" onclick="viewClubFromAdmin(${club.id})">View Club</button></td>
+        `;
+      tbody.appendChild(tr);
+    });
+  } catch (err){
+    setStatus("admin_club_overview_status", "Failed to load clubs.", "error");
+    tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Unable to load clubs overview.</td></tr>';
+  }
+}
+
+function viewClubFromAdmin(clubId){
+  if(!clubId){ return; }
+  const input = document.getElementById("club_detail_id");
+  if(input){
+    input.value = clubId;
+  }
+  showNavSection("clubs");
+  loadClubDetail();
+}

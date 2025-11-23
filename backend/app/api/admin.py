@@ -4,8 +4,8 @@ from sqlalchemy.orm import Session
 
 from ..deps import ensure_admin, get_db, get_user
 from ..models import Club, ClubMember, Flag, User
-from ..schemas import ClubSummary, FlagOut, UserOut
-from ..services import club_summary, serialize_flag
+from ..schemas import AdminClubSummary, ClubSummary, FlagOut, UserOut
+from ..services import admin_club_summary, club_summary, serialize_flag
 
 router = APIRouter()
 
@@ -56,6 +56,16 @@ def pending_clubs(
         .all()
     )
     return [club_summary(db, club) for club in clubs]
+
+
+@router.get("/api/admin/clubs/overview", response_model=list[AdminClubSummary])
+def clubs_overview(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_user),
+):
+    ensure_admin(user)
+    clubs = db.execute(select(Club).order_by(Club.name.asc())).scalars().all()
+    return [admin_club_summary(db, club) for club in clubs]
 
 
 @router.post("/api/admin/clubs/{club_id}/approve", response_model=ClubSummary)

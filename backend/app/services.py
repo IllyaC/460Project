@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from .models import Club, ClubAnnouncement, ClubMember, Event, Flag, Registration
 from .schemas import (
+    AdminClubSummary,
     AnnouncementOut,
     ClubDetail,
     ClubMemberOut,
@@ -81,6 +82,47 @@ def club_summary(db: Session, club: Club, user_email: Optional[str] = None) -> C
         upcoming_event_count=upcoming_events,
         membership_status=membership_status,
         membership_role=membership_role,
+    )
+
+
+def admin_club_summary(db: Session, club: Club) -> AdminClubSummary:
+    approved_members = (
+        db.execute(
+            select(func.count(ClubMember.id)).where(
+                ClubMember.club_id == club.id,
+                ClubMember.status == "approved",
+            )
+        ).scalar()
+        or 0
+    )
+    pending_members = (
+        db.execute(
+            select(func.count(ClubMember.id)).where(
+                ClubMember.club_id == club.id,
+                ClubMember.status == "pending",
+            )
+        ).scalar()
+        or 0
+    )
+    upcoming_events = (
+        db.execute(
+            select(func.count(Event.id)).where(
+                Event.club_id == club.id,
+                Event.starts_at >= datetime.utcnow(),
+            )
+        ).scalar()
+        or 0
+    )
+    category = getattr(club, "category", None)
+
+    return AdminClubSummary(
+        id=club.id,
+        name=club.name,
+        approved=club.approved,
+        category=category,
+        member_count=approved_members,
+        pending_member_count=pending_members,
+        upcoming_event_count=upcoming_events,
     )
 
 
