@@ -1,5 +1,4 @@
 from fastapi import Depends, Header, HTTPException
-from fastapi import Depends, Header, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -59,3 +58,19 @@ def ensure_leader_role(user: User) -> None:
         return
     if user.role != "leader" or not user.is_approved:
         raise HTTPException(status_code=403, detail="Leader approval required")
+
+
+def ensure_leader_or_admin(user: User = Depends(get_user)) -> User:
+    """Allow only approved leaders or admins.
+
+    Leaders must have been approved by an admin; admins are always allowed.
+    """
+
+    if user.role == "admin":
+        return user
+    if user.role == "leader" and user.is_approved:
+        return user
+    raise HTTPException(
+        status_code=403,
+        detail="Only leaders and admins can create events.",
+    )

@@ -174,6 +174,16 @@ def test_unapproved_leader_blocked_from_leader_actions(client):
     assert create_resp.status_code == 403
 
 
+def test_student_cannot_create_club(client):
+    headers = auth_headers("student1@school.edu", "student")
+    create_resp = client.post(
+        "/api/clubs",
+        json={"name": "Student Club", "description": "students cannot create"},
+        headers=headers,
+    )
+    assert create_resp.status_code == 403
+
+
 def test_admin_can_approve_pending_leader(client):
     leader_resp = client.post(
         "/api/auth/register",
@@ -481,6 +491,115 @@ def test_event_filter_by_title(client):
     results = filter_resp.json()
     assert results
     assert all("jam" in event["title"].lower() for event in results)
+
+
+def test_leader_can_create_event_for_own_club(client):
+    club_id = get_club_id_by_name("AI Club")
+    leader_headers = auth_headers("leader@school.edu", "leader")
+    payload = {
+        "title": "Leader Led Event",
+        "starts_at": (datetime.utcnow() + timedelta(days=1)).isoformat(),
+        "location": "ENG 303",
+        "capacity": 15,
+        "price_cents": 0,
+        "category": "tech",
+        "club_id": club_id,
+    }
+
+    resp = client.post("/api/events", json=payload, headers=leader_headers)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["club_id"] == club_id
+
+    with TestingSessionLocal() as session:
+        stored = session.get(models.Event, data["id"])
+        assert stored is not None
+        assert stored.club_id == club_id
+
+
+def test_admin_can_create_campus_event(client):
+    admin_headers = auth_headers("admin@school.edu", "admin")
+    payload = {
+        "title": "Campus Wide Talk",
+        "starts_at": (datetime.utcnow() + timedelta(days=2)).isoformat(),
+        "location": "Main Auditorium",
+        "capacity": 100,
+        "price_cents": 0,
+        "category": "general",
+        "club_id": None,
+    }
+
+    resp = client.post("/api/events", json=payload, headers=admin_headers)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["club_id"] is None
+
+    with TestingSessionLocal() as session:
+        stored = session.get(models.Event, data["id"])
+        assert stored is not None
+        assert stored.club_id is None
+
+
+def test_student_cannot_create_event(client):
+    student_headers = auth_headers("student1@school.edu", "student")
+    payload = {
+        "title": "Student Should Fail",
+        "starts_at": (datetime.utcnow() + timedelta(days=1)).isoformat(),
+        "location": "Hall X",
+        "capacity": 10,
+        "price_cents": 0,
+        "category": "general",
+        "club_id": None,
+    }
+
+    resp = client.post("/api/events", json=payload, headers=student_headers)
+    assert resp.status_code == 403
+
+
+def test_unapproved_leader_cannot_create_event(client):
+    pending_resp = client.post(
+        "/api/auth/register",
+        json={
+            "username": "pendingeventleader",
+            "email": "pendingeventleader@school.edu",
+            "password": "password123",
+            "desired_role": "leader",
+        },
+    )
+    assert pending_resp.status_code == 200
+    pending = pending_resp.json()
+    assert pending["is_approved"] is False
+
+    headers = auth_headers("pendingeventleader@school.edu", "leader")
+    payload = {
+        "title": "Pending Leader Event",
+        "starts_at": (datetime.utcnow() + timedelta(days=1)).isoformat(),
+        "location": "Hall Y",
+        "capacity": 5,
+        "price_cents": 0,
+        "category": "tech",
+        "club_id": None,
+    }
+
+    resp = client.post("/api/events", json=payload, headers=headers)
+    assert resp.status_code == 403
+
+
+def test_leader_cannot_create_event_for_other_club(client):
+    other_club_id = get_club_id_by_name("Music Makers")
+    leader_headers = auth_headers("leader@school.edu", "leader")
+    payload = {
+        "title": "Cross Club Event",
+        "starts_at": (datetime.utcnow() + timedelta(days=3)).isoformat(),
+        "location": "Hall Z",
+        "capacity": 25,
+        "price_cents": 0,
+        "category": "music",
+        "club_id": other_club_id,
+    }
+
+    resp = client.post("/api/events", json=payload, headers=leader_headers)
+    assert resp.status_code == 403
 
 
 def test_seed_creates_rich_demo_dataset():
