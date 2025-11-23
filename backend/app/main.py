@@ -257,6 +257,25 @@ def trending_events(limit: int = 5, db: Session = Depends(get_db)):
     return [serialize_event(event, regs) for event, regs in rows]
 
 
+@app.delete("/api/events/{event_id}")
+def delete_event(
+    event_id: int,
+    db: Session = Depends(get_db),
+    user: UserContext = Depends(get_user),
+):
+    event = db.get(Event, event_id)
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+
+    if event.club_id:
+        ensure_leader(db, event.club_id, user)
+    else:
+        ensure_admin(user)
+
+    db.delete(event)
+    return {"status": "deleted"}
+
+
 @app.post("/api/registrations")
 def register(
     payload: RegistrationCreate,
@@ -393,6 +412,7 @@ def create_club(
 
 def club_summary(db: Session, club: Club, user_email: Optional[str] = None) -> ClubSummary:
     membership_status = None
+    membership_role = None
     if user_email:
         membership = (
             db.execute(
@@ -406,6 +426,7 @@ def club_summary(db: Session, club: Club, user_email: Optional[str] = None) -> C
         )
         if membership:
             membership_status = membership.status
+            membership_role = membership.role
 
     member_count = (
         db.execute(
@@ -434,6 +455,7 @@ def club_summary(db: Session, club: Club, user_email: Optional[str] = None) -> C
         member_count=member_count,
         upcoming_event_count=upcoming_events,
         membership_status=membership_status,
+        membership_role=membership_role,
     )
 
 

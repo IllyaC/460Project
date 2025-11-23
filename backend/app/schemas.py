@@ -49,6 +49,7 @@ class ClubSummary(BaseModel):
     member_count: int
     upcoming_event_count: int
     membership_status: Optional[str] = None
+    membership_role: Optional[str] = None
 
 
 class ClubMemberOut(BaseModel):
