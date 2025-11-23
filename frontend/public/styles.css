@@ -397,6 +397,126 @@ tbody tr:hover {
   background: #f8fbff;
 }
 
+.event-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.event-card {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+  isolation: isolate;
+}
+
+.event-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  border: 2px solid transparent;
+  pointer-events: none;
+}
+
+.event-card:hover::before,
+.event-card.highlight::before {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(45, 108, 223, 0.14);
+}
+
+.event-card.highlight {
+  background: #f7fbff;
+}
+
+.event-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.event-card__title {
+  margin: 0;
+  font-weight: 700;
+  color: var(--ink);
+  font-size: 1.05rem;
+}
+
+.event-card__datetime {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.event-card__price {
+  font-weight: 700;
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+  padding: 6px 10px;
+  border-radius: 10px;
+  min-width: 72px;
+  text-align: center;
+}
+
+.event-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: #f0f4ff;
+  color: var(--ink);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.pill-muted {
+  background: #f6f7fb;
+  color: var(--muted);
+}
+
+.event-card__stats {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.event-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.event-card__actions button {
+  margin-top: 0;
+}
+
+.register-btn {
+  padding: 10px 18px;
+}
+
+.empty-state {
+  padding: 12px 14px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  color: var(--muted);
+  background: #f9fbff;
+}
+
 .card-list {
   list-style: none;
   padding: 0;
@@ -459,5 +579,14 @@ ul {
 
   .nav-bar {
     gap: 8px;
+  }
+
+  .event-card__header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .event-card__actions {
+    width: 100%;
   }
 }
