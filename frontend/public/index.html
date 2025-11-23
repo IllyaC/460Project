@@ -56,7 +56,18 @@
       <div>
         <label>Starts after <input id="filter_start" placeholder="2024-09-01T00:00:00Z"></label>
         <label>Ends before <input id="filter_end" placeholder="2024-09-30T23:59:59Z"></label>
-        <label>Category <input id="filter_category" placeholder="tech"></label>
+        <label>Category
+          <select id="filter_category">
+            <option value="">Any</option>
+            <option value="music">music</option>
+            <option value="tech">tech</option>
+            <option value="sports">sports</option>
+            <option value="social">social</option>
+            <option value="career">career</option>
+            <option value="other">other</option>
+          </select>
+        </label>
+        <label>Title contains <input id="filter_title" placeholder="Workshop"></label>
         <label>Location contains <input id="filter_location" placeholder="ENG"></label>
         <label>Sort
           <select id="filter_sort">
@@ -64,8 +75,9 @@
             <option value="popularity">popularity</option>
           </select>
         </label>
-        <label><input type="checkbox" id="filter_free"> Free only</label>
+        <label><input type="checkbox" id="filter_free"> Free events only</label>
         <button onclick="listEvents()">Run search</button>
+        <button type="button" onclick="resetFilters()">Reset filters</button>
         <button onclick="loadTrending()">Trending</button>
       </div>
       <div>
@@ -290,16 +302,29 @@
     listEvents();
   }
 
+  function resetFilters(){
+    document.getElementById("filter_start").value = "";
+    document.getElementById("filter_end").value = "";
+    document.getElementById("filter_category").value = "";
+    document.getElementById("filter_title").value = "";
+    document.getElementById("filter_location").value = "";
+    document.getElementById("filter_sort").value = "date";
+    document.getElementById("filter_free").checked = false;
+    listEvents();
+  }
+
   async function listEvents(skipRegistrationSync = false){
     const params = new URLSearchParams();
     const start = document.getElementById("filter_start").value;
     const end = document.getElementById("filter_end").value;
     const category = document.getElementById("filter_category").value;
+    const title = document.getElementById("filter_title").value;
     const location = document.getElementById("filter_location").value;
     const sort = document.getElementById("filter_sort").value;
     if(start) params.set("start", start);
     if(end) params.set("end", end);
     if(category) params.set("category", category);
+    if(title) params.set("title", title);
     if(location) params.set("location", location);
     if(document.getElementById("filter_free").checked) params.set("free_only", true);
     if(sort) params.set("sort", sort);
