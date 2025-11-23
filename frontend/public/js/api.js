@@ -19,12 +19,29 @@ function buildErrorMessage(res, body){
 }
 
 function buildHeaders(json=true){
-  const headers = {
-    "X-User-Email": personaEmail,
-    "X-User-Role": personaRole
-  };
+  const headers = {};
+  const user = currentUser();
+  if(user?.id){ headers["X-User-Id"] = user.id; }
+  if(user?.email){ headers["X-User-Email"] = user.email; }
   if(json){ headers["Content-Type"] = "application/json"; }
   return headers;
+}
+
+// Auth APIs
+function apiRegisterUser(payload){
+  return fetch(`${API}/auth/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+}
+
+function apiLoginUser(payload){
+  return fetch(`${API}/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
 }
 
 // Events APIs

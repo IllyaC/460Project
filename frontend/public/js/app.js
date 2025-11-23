@@ -20,46 +20,102 @@ function clearStatus(id){
 
 function updateUserSummary(){
   const summary = document.getElementById("user_summary");
-  if(!personaEmail){
+  const user = currentUser();
+  if(!user){
     summary.textContent = "";
     return;
   }
-  const displayRole = personaRole === "leader" ? "Club Leader" : personaRole.charAt(0).toUpperCase() + personaRole.slice(1);
-  const displayName = personaName ? `${personaName} • ` : "";
-  summary.textContent = `${displayName}${personaEmail} (${displayRole})`;
+  const isLeader = user.role === "leader";
+  const roleLabel = user.role === "admin" ? "Admin" : isLeader ? "Club Leader" : "Student";
+  const approvalLabel = isLeader && !user.is_approved ? " • Pending approval" : "";
+  const displayName = user.username ? `${user.username} • ` : "";
+  summary.textContent = `${displayName}${user.email} (${roleLabel}${approvalLabel})`;
 }
 
-function handleLogin(){
-  const name = document.getElementById("login_name").value.trim();
-  const email = document.getElementById("login_email").value.trim();
-  const role = document.getElementById("login_role").value;
+function showAuthTab(target){
+  document.querySelectorAll(".auth-tab").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.target === target);
+  });
+  document.getElementById("signup_panel")?.classList.toggle("hidden", target !== "signup");
+  document.getElementById("login_panel")?.classList.toggle("hidden", target !== "login");
+}
 
-  if(!name || !email){
-    setStatus("login_status", "Name and email are required to continue.", "error");
+async function handleSignup(event){
+  event?.preventDefault();
+  const username = document.getElementById("signup_username").value.trim();
+  const email = document.getElementById("signup_email").value.trim();
+  const password = document.getElementById("signup_password").value;
+  const desiredRole = document.getElementById("signup_role").value;
+  if(!username || !email || !password){
+    setStatus("signup_status", "All fields are required to create an account.", "error");
     return;
   }
 
-  setPersona(name, email, role);
-  clearStatus("login_status");
-  startSession();
+  setStatus("signup_status", "Creating your account...", "info");
+  try {
+    const res = await apiRegisterUser({ username, email, password, desired_role: desiredRole });
+    const body = await readJson(res);
+    if(res.ok){
+      const successMessage = desiredRole === "leader"
+        ? "Account created. An admin must approve your leader role before you can manage clubs."
+        : "Account created. You can now sign in.";
+      setStatus("signup_status", successMessage, "success");
+      document.getElementById("login_identifier").value = email || username;
+      showAuthTab("login");
+    } else {
+      setStatus("signup_status", `Sign up failed: ${buildErrorMessage(res, body)}`, "error");
+    }
+  } catch (err){
+    setStatus("signup_status", "Unable to sign up right now. Please try again.", "error");
+  }
 }
 
-function switchUser(event){
+async function handleLogin(event){
   event?.preventDefault();
-  resetPersona();
+  const identifier = document.getElementById("login_identifier").value.trim();
+  const password = document.getElementById("login_password").value;
+  if(!identifier || !password){
+    setStatus("login_status", "Username/email and password are required.", "error");
+    return;
+  }
+  setStatus("login_status", "Signing you in...", "info");
+  try {
+    const res = await apiLoginUser({ username_or_email: identifier, password });
+    const body = await readJson(res);
+    if(res.ok){
+      setUser(body);
+      clearStatus("login_status");
+      startSession();
+    } else {
+      setStatus("login_status", `Login failed: ${buildErrorMessage(res, body)}`, "error");
+    }
+  } catch (err){
+    setStatus("login_status", "Unable to log in right now. Please try again.", "error");
+  }
+}
+
+function signOut(event){
+  event?.preventDefault();
+  resetUser();
   resetSharedState();
   resetAppContent();
-  document.getElementById("login_name").value = "";
-  document.getElementById("login_email").value = "";
-  document.getElementById("login_role").value = "student";
+  document.getElementById("login_identifier").value = "";
+  document.getElementById("login_password").value = "";
+  document.getElementById("signup_username").value = "";
+  document.getElementById("signup_email").value = "";
+  document.getElementById("signup_password").value = "";
   document.getElementById("login_section").classList.remove("hidden");
   document.getElementById("app_shell").classList.add("hidden");
   document.getElementById("top_bar").classList.add("hidden");
+  document.getElementById("role_notice").classList.add("hidden");
+  showAuthTab("signup");
   updateRoleVisibility();
   updateUserSummary();
 }
 
 function startSession(){
+  const user = currentUser();
+  if(!user){ return; }
   document.getElementById("login_section").classList.add("hidden");
   document.getElementById("app_shell").classList.remove("hidden");
   document.getElementById("top_bar").classList.remove("hidden");
@@ -74,7 +130,7 @@ function startSession(){
   if(clubDetailValue){
     loadClubDetail();
   }
-  if(personaRole === "admin"){
+  if(user.role === "admin"){
     loadPendingClubs();
     loadPendingLeaders();
     loadFlags();
@@ -102,7 +158,7 @@ function resetAppContent(){
 
 function showNavSection(target){
   const groups = getSectionGroups();
-  if(target === "admin" && personaRole !== "admin"){
+  if(target === "admin" && currentUser()?.role !== "admin"){
     target = "events";
   }
   groups.forEach(group => {
@@ -117,17 +173,28 @@ function showNavSection(target){
 }
 
 function updateRoleVisibility(){
-  const role = personaRole;
+  const user = currentUser();
+  const role = user?.role ?? "";
+  const leaderApproved = role === "leader" && user?.is_approved;
   document.querySelectorAll(".admin-only").forEach(el => {
     const hidden = role !== "admin";
     el.classList.toggle("hidden", hidden);
     el.setAttribute("aria-hidden", hidden);
   });
   document.querySelectorAll(".leader-only").forEach(el => {
-    const hidden = role !== "leader" && role !== "admin";
+    const hidden = role !== "admin" && !leaderApproved;
     el.classList.toggle("hidden", hidden);
     el.setAttribute("aria-hidden", hidden);
   });
+
+  const roleNotice = document.getElementById("role_notice");
+  if(role === "leader" && !leaderApproved){
+    roleNotice.textContent = "Your leader account is pending admin approval.";
+    roleNotice.classList.remove("hidden");
+  } else {
+    roleNotice.classList.add("hidden");
+    roleNotice.textContent = "";
+  }
 
   const activeNav = document.querySelector(".nav-button.active")?.dataset.target ?? "events";
   if(role !== "admin" && activeNav === "admin"){
@@ -139,3 +206,4 @@ function updateRoleVisibility(){
 resetAppContent();
 updateRoleVisibility();
 showNavSection("events");
+showAuthTab("signup");

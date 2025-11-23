@@ -16,25 +16,35 @@
     </div>
     <div id="top_bar" class="top-bar hidden">
       <div id="user_summary" class="user-summary"></div>
-      <a href="#" id="switch_user_link" class="switch-user" onclick="switchUser(event)">Switch User</a>
+      <a href="#" id="sign_out_link" class="switch-user" onclick="signOut(event)">Sign out</a>
     </div>
   </header>
 
   <section id="login_section">
-    <h2>Login</h2>
-    <p>Choose who you want to explore the campus portal as.</p>
-    <div class="row">
-      <div>
-        <label>Name <input id="login_name" placeholder="Jordan Rivera"></label>
-        <label>Email <input id="login_email" placeholder="student@example.edu"></label>
+    <h2>Sign up or Log In</h2>
+    <p>Create your account to explore events, clubs, and admin tools tailored to your role.</p>
+    <div class="auth-card">
+      <div class="auth-tabs" role="tablist">
+        <button type="button" class="auth-tab active" data-target="signup" onclick="showAuthTab('signup')">Sign Up</button>
+        <button type="button" class="auth-tab" data-target="login" onclick="showAuthTab('login')">Log In</button>
+      </div>
+      <div id="signup_panel" class="auth-panel" role="tabpanel">
+        <label>Username <input id="signup_username" placeholder="jordan" autocomplete="username"></label>
+        <label>Email <input id="signup_email" placeholder="student@example.edu" autocomplete="email"></label>
+        <label>Password <input id="signup_password" type="password" autocomplete="new-password"></label>
         <label>Role
-          <select id="login_role">
+          <select id="signup_role">
             <option value="student">Student</option>
             <option value="leader">Club Leader</option>
-            <option value="admin">Admin</option>
           </select>
         </label>
-        <button type="button" onclick="handleLogin()">Continue</button>
+        <button type="button" onclick="handleSignup(event)">Create Account</button>
+        <div id="signup_status" class="section-status status" aria-live="polite"></div>
+      </div>
+      <div id="login_panel" class="auth-panel hidden" role="tabpanel">
+        <label>Username or Email <input id="login_identifier" placeholder="jordan or student@example.edu" autocomplete="username"></label>
+        <label>Password <input id="login_password" type="password" autocomplete="current-password"></label>
+        <button type="button" onclick="handleLogin(event)">Log In</button>
         <div id="login_status" class="section-status status" aria-live="polite"></div>
       </div>
     </div>
@@ -48,6 +58,8 @@
     <button type="button" class="nav-button" id="nav-mystuff" data-target="mystuff" onclick="showNavSection('mystuff')">My Stuff</button>
     <button type="button" class="nav-button admin-only" id="nav-admin" data-target="admin" onclick="showNavSection('admin')">Admin</button>
   </nav>
+
+  <div id="role_notice" class="role-notice hidden" role="status" aria-live="polite"></div>
 
   <section data-section-group="events" class="content-section">
     <div class="section-header">

@@ -157,11 +157,11 @@ function resetFilters(){
 }
 
 function canManageEvent(event){
-  const persona = currentPersona();
-  if(persona.role === "admin"){ return true; }
+  const user = currentUser();
+  if(user?.role === "admin"){ return true; }
   if(!event.club_id){ return false; }
   const membershipRole = clubRoles.get(event.club_id);
-  return persona.role === "leader" && membershipRole === "leader";
+  return user?.role === "leader" && user?.is_approved && membershipRole === "leader";
 }
 
 async function loadEvents(skipRegistrationSync = false){
