@@ -58,35 +58,52 @@
       </div>
     </div>
     <div class="row card-grid">
-      <div class="panel">
-        <h3>Search & Filter</h3>
-        <p class="hint">Dial in the dates, categories, and location to find the right fit.</p>
-        <label>Starts after <input id="filter_start" placeholder="2024-09-01T00:00:00Z"></label>
-        <label>Ends before <input id="filter_end" placeholder="2024-09-30T23:59:59Z"></label>
-        <label>Category
-          <select id="filter_category">
-            <option value="">Any</option>
-            <option value="music">music</option>
-            <option value="tech">tech</option>
-            <option value="sports">sports</option>
-            <option value="social">social</option>
-            <option value="career">career</option>
-            <option value="other">other</option>
-          </select>
-        </label>
-        <label>Title contains <input id="filter_title" placeholder="Workshop"></label>
-        <label>Location contains <input id="filter_location" placeholder="ENG"></label>
-        <label>Sort
-          <select id="filter_sort">
-            <option value="date">date</option>
-            <option value="popularity">popularity</option>
-          </select>
-        </label>
-        <label><input type="checkbox" id="filter_free"> Free events only</label>
+      <div class="panel filter-panel">
+        <div class="section-header compact">
+          <div>
+            <p class="eyebrow">Find Events</p>
+            <h3>Search & Filter</h3>
+            <p class="hint">Dial in the dates, categories, and locations to find the right fit.</p>
+          </div>
+          <button type="button" class="btn-ghost" onclick="loadTrending()">Trending</button>
+        </div>
+        <div class="filter-grid">
+          <div class="filter-cluster">
+            <p class="cluster-label">Dates</p>
+            <label>Starts after <input id="filter_start" placeholder="e.g., 2024-09-01T08:00:00Z"></label>
+            <label>Ends before <input id="filter_end" placeholder="e.g., 2024-09-30T23:59:59Z"></label>
+          </div>
+          <div class="filter-cluster">
+            <p class="cluster-label">Details</p>
+            <label>Category
+              <select id="filter_category">
+                <option value="">Any category</option>
+                <option value="music">music</option>
+                <option value="tech">tech</option>
+                <option value="sports">sports</option>
+                <option value="social">social</option>
+                <option value="career">career</option>
+                <option value="other">other</option>
+              </select>
+            </label>
+            <label>Title contains <input id="filter_title" placeholder="Workshop, social, meetup"></label>
+            <label>Location contains <input id="filter_location" placeholder="Student Union, ENG, etc."></label>
+          </div>
+          <div class="filter-cluster">
+            <p class="cluster-label">Preferences</p>
+            <label class="checkbox-inline"><input type="checkbox" id="filter_free"> Free events only</label>
+            <label>Sort by
+              <select id="filter_sort">
+                <option value="date">Date</option>
+                <option value="popularity">Popularity</option>
+              </select>
+            </label>
+          </div>
+        </div>
         <div class="button-row">
-          <button onclick="loadEvents()">Run Search</button>
-          <button type="button" onclick="resetFilters()">Reset Filters</button>
-          <button onclick="loadTrending()">Trending</button>
+          <button type="button" class="btn-primary" onclick="loadEvents()">Search</button>
+          <button type="button" class="btn-secondary" onclick="resetFilters()">Reset filters</button>
+          <button type="button" class="btn-ghost" onclick="loadTrending()">See trending</button>
         </div>
       </div>
       <div class="panel">
@@ -104,13 +121,22 @@
         </div>
       </div>
     </div>
-    <div class="table-wrapper">
-      <table>
-        <thead>
-          <tr><th>ID</th><th>Title</th><th>When</th><th>Location</th><th>Category</th><th>Club</th><th>Capacity</th><th>Registered</th><th></th></tr>
-        </thead>
-        <tbody id="events_tbody"></tbody>
-      </table>
+    <div class="panel table-panel">
+      <div class="section-header compact">
+        <div>
+          <p class="eyebrow">Results</p>
+          <h3>Upcoming Events</h3>
+        </div>
+        <button type="button" class="btn-secondary" onclick="loadEvents()">Refresh</button>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr><th>Title</th><th>Date &amp; Time</th><th>Location</th><th>Category</th><th>Price</th><th>Popularity</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="events_tbody"></tbody>
+        </table>
+      </div>
     </div>
     <div class="panel">
       <div class="section-header compact">
@@ -315,6 +341,12 @@
     const dt = new Date(Date.now() + days * 86400000);
     dt.setSeconds(0,0);
     return dt.toISOString();
+  }
+
+  function formatPrice(cents){
+    if(cents === null || cents === undefined){ return "—"; }
+    if(Number(cents) === 0){ return "Free"; }
+    return `$${(Number(cents) / 100).toFixed(2)}`;
   }
 
   document.getElementById("event_starts").value = isoPlusDays(2);
@@ -536,29 +568,32 @@
       res = await fetch(`${API}/events?${params.toString()}`);
     } catch (err){
       setStatus("events_status", "Failed to load events. Please try again.", "error");
-      tbody.innerHTML = '<tr><td colspan="9">Unable to reach the events service.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7">Unable to reach the events service.</td></tr>';
       return;
     }
 
     if(!res.ok){
       const body = await readJson(res);
       setStatus("events_status", `Failed to load events: ${buildErrorMessage(res, body)}`, "error");
-      tbody.innerHTML = '<tr><td colspan="9">Unable to load events.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7">Unable to load events.</td></tr>';
       return;
     }
 
     const data = await res.json();
     if(data.length === 0){
-      tbody.innerHTML = '<tr><td colspan="9">No events found. Adjust your filters and try again.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7">No events found. Adjust your filters and try again.</td></tr>';
       return;
     }
 
     data.forEach(ev => {
       const tr = document.createElement("tr");
       tr.id = `event-row-${ev.id}`;
-      tr.innerHTML = `<td>${ev.id}</td><td>${ev.title}</td><td>${new Date(ev.starts_at).toLocaleString()}</td>` +
-                     `<td>${ev.location}</td><td>${ev.category}</td><td>${ev.club_id ?? '-'}</td>` +
-                     `<td>${ev.capacity || '∞'}</td><td>${ev.registration_count}</td>`;
+      const price = formatPrice(ev.price_cents);
+      const popularity = ev.registration_count ?? 0;
+      const capacity = ev.capacity ? `${popularity}/${ev.capacity}` : popularity;
+      tr.innerHTML = `<td>${ev.title}</td><td>${new Date(ev.starts_at).toLocaleString()}</td>` +
+                     `<td>${ev.location}</td><td>${ev.category}</td><td>${price}</td>` +
+                     `<td>${capacity}</td>`;
 
       const actionCell = document.createElement("td");
       const isRegistered = myRegistrations.has(ev.id);
