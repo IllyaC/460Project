@@ -71,8 +71,36 @@
         <div class="filter-grid">
           <div class="filter-cluster">
             <p class="cluster-label">Dates</p>
-            <label>Starts after <input id="filter_start" placeholder="e.g., 2024-09-01T08:00:00Z"></label>
-            <label>Ends before <input id="filter_end" placeholder="e.g., 2024-09-30T23:59:59Z"></label>
+            <label class="date-time-group">Starts after
+              <div class="datetime-inputs">
+                <input type="date" id="filter_start_date">
+                <div class="time-inputs">
+                  <input type="number" id="filter_start_hour" min="1" max="12" placeholder="HH">
+                  <span class="time-separator">:</span>
+                  <input type="number" id="filter_start_minute" min="0" max="59" placeholder="MM">
+                  <select id="filter_start_ampm">
+                    <option value="">AM/PM</option>
+                    <option value="AM">AM</option>
+                    <option value="PM">PM</option>
+                  </select>
+                </div>
+              </div>
+            </label>
+            <label class="date-time-group">Ends before
+              <div class="datetime-inputs">
+                <input type="date" id="filter_end_date">
+                <div class="time-inputs">
+                  <input type="number" id="filter_end_hour" min="1" max="12" placeholder="HH">
+                  <span class="time-separator">:</span>
+                  <input type="number" id="filter_end_minute" min="0" max="59" placeholder="MM">
+                  <select id="filter_end_ampm">
+                    <option value="">AM/PM</option>
+                    <option value="AM">AM</option>
+                    <option value="PM">PM</option>
+                  </select>
+                </div>
+              </div>
+            </label>
           </div>
           <div class="filter-cluster">
             <p class="cluster-label">Details</p>
@@ -110,13 +138,27 @@
       <div class="panel">
         <h3>Create Event</h3>
         <p class="hint">Share a meetup, workshop, or social and put it on the radar.</p>
-        <label>Title <input id="event_title" value="Hack Night"></label>
-        <label>Starts At <input id="event_starts"></label>
-        <label>Location <input id="event_location" value="Student Union"></label>
-        <label>Capacity <input type="number" id="event_capacity" value="5"></label>
-        <label>Price (cents) <input type="number" id="event_price" value="0"></label>
-        <label>Category <input id="event_category" value="tech"></label>
-        <label>Club ID (optional) <input type="number" id="event_club"></label>
+        <label>Title <input id="event_title" placeholder="Workshop title"></label>
+        <label class="date-time-group">Starts At
+          <div class="datetime-inputs">
+            <input type="date" id="event_start_date">
+            <div class="time-inputs">
+              <input type="number" id="event_start_hour" min="1" max="12" placeholder="HH">
+              <span class="time-separator">:</span>
+              <input type="number" id="event_start_minute" min="0" max="59" placeholder="MM">
+              <select id="event_start_ampm">
+                <option value="">AM/PM</option>
+                <option value="AM">AM</option>
+                <option value="PM">PM</option>
+              </select>
+            </div>
+          </div>
+        </label>
+        <label>Location <input id="event_location" placeholder="Student Union"></label>
+        <label>Capacity <input type="number" id="event_capacity" placeholder="50"></label>
+        <label>Price (cents) <input type="number" id="event_price" placeholder="0"></label>
+        <label>Category <input id="event_category" placeholder="tech"></label>
+        <label>Club ID (optional) <input type="number" id="event_club" placeholder="Club ID"></label>
         <div class="button-row">
           <button onclick="createEvent()">Create Event</button>
         </div>
@@ -191,7 +233,7 @@
           <p class="hint">Inspect a specific club and use leader tools when available.</p>
         </div>
         <div class="button-row inline">
-          <label>Club ID <input type="number" id="club_detail_id" value="1"></label>
+          <label>Club ID <input type="number" id="club_detail_id" placeholder="Club ID"></label>
           <button onclick="loadClubDetail()">Load Club</button>
         </div>
       </div>
@@ -212,12 +254,26 @@
             <h4>Schedule Club Event</h4>
             <p class="hint">Share dates, locations, and capacity for upcoming meetups.</p>
             <div class="form-grid">
-              <label>Title <input id="club_event_title" value="Study Session"></label>
-              <label>Starts At <input id="club_event_starts"></label>
-              <label>Location <input id="club_event_location" value="Library 201"></label>
-              <label>Capacity <input type="number" id="club_event_capacity" value="10"></label>
-              <label>Price (cents) <input type="number" id="club_event_price" value="0"></label>
-              <label>Category <input id="club_event_category" value="community"></label>
+              <label>Title <input id="club_event_title" placeholder="Study session, workshop"></label>
+              <label class="date-time-group">Starts At
+                <div class="datetime-inputs">
+                  <input type="date" id="club_event_start_date">
+                  <div class="time-inputs">
+                    <input type="number" id="club_event_start_hour" min="1" max="12" placeholder="HH">
+                    <span class="time-separator">:</span>
+                    <input type="number" id="club_event_start_minute" min="0" max="59" placeholder="MM">
+                    <select id="club_event_start_ampm">
+                      <option value="">AM/PM</option>
+                      <option value="AM">AM</option>
+                      <option value="PM">PM</option>
+                    </select>
+                  </div>
+                </div>
+              </label>
+              <label>Location <input id="club_event_location" placeholder="Library 201"></label>
+              <label>Capacity <input type="number" id="club_event_capacity" placeholder="50"></label>
+              <label>Price (cents) <input type="number" id="club_event_price" placeholder="0"></label>
+              <label>Category <input id="club_event_category" placeholder="community"></label>
             </div>
             <div class="button-row aligned">
               <button onclick="createClubEvent()">Create Event</button>
@@ -394,10 +450,30 @@
     return detail ? `${detail} (status ${res.status})` : `Status ${res.status}`;
   }
 
-  function isoPlusDays(days){
-    const dt = new Date(Date.now() + days * 86400000);
-    dt.setSeconds(0,0);
+  function buildIsoFromInputs(dateId, hourId, minuteId, ampmId){
+    const dateValue = document.getElementById(dateId)?.value;
+    const hourValue = document.getElementById(hourId)?.value;
+    const minuteValue = document.getElementById(minuteId)?.value;
+    const ampmValue = document.getElementById(ampmId)?.value;
+    if(!dateValue){ return null; }
+    if(!hourValue || !minuteValue || !ampmValue){ return null; }
+    const [year, month, day] = dateValue.split("-").map(Number);
+    const hourNumber = Number(hourValue);
+    const minuteNumber = Number(minuteValue);
+    if(!year || !month || !day){ return null; }
+    if(Number.isNaN(hourNumber) || Number.isNaN(minuteNumber)){ return null; }
+    if(hourNumber < 1 || hourNumber > 12 || minuteNumber < 0 || minuteNumber > 59){ return null; }
+    let hour24 = hourNumber % 12;
+    if(ampmValue.toLowerCase() === "pm"){ hour24 += 12; }
+    const dt = new Date(Date.UTC(year, month - 1, day, hour24, minuteNumber, 0, 0));
     return dt.toISOString();
+  }
+
+  function clearDateTimeFields(prefix){
+    ["date", "hour", "minute", "ampm"].forEach(part => {
+      const el = document.getElementById(`${prefix}_${part}`);
+      if(el){ el.value = ""; }
+    });
   }
 
   function formatPrice(cents){
@@ -405,9 +481,6 @@
     if(Number(cents) === 0){ return "Free"; }
     return `$${(Number(cents) / 100).toFixed(2)}`;
   }
-
-  document.getElementById("event_starts").value = isoPlusDays(2);
-  document.getElementById("club_event_starts").value = isoPlusDays(5);
 
   function normalizeDetail(body){
     const detail = body?.detail || body?.error || body?.message;
@@ -601,9 +674,14 @@
   }
 
   async function createEvent(){
+    const startsAt = buildIsoFromInputs("event_start_date", "event_start_hour", "event_start_minute", "event_start_ampm");
+    if(!startsAt){
+      setStatus("events_status", "Please provide a full start date and time (date, hour, minute, AM/PM).", "error");
+      return;
+    }
     const payload = {
       title: document.getElementById("event_title").value,
-      starts_at: document.getElementById("event_starts").value,
+      starts_at: startsAt,
       location: document.getElementById("event_location").value,
       capacity: Number(document.getElementById("event_capacity").value),
       price_cents: Number(document.getElementById("event_price").value),
@@ -625,8 +703,8 @@
   }
 
   function resetFilters(){
-    document.getElementById("filter_start").value = "";
-    document.getElementById("filter_end").value = "";
+    clearDateTimeFields("filter_start");
+    clearDateTimeFields("filter_end");
     document.getElementById("filter_category").value = "";
     document.getElementById("filter_title").value = "";
     document.getElementById("filter_location").value = "";
@@ -638,8 +716,8 @@
   async function loadEvents(skipRegistrationSync = false){
     clearStatus("events_status");
     const params = new URLSearchParams();
-    const start = document.getElementById("filter_start").value;
-    const end = document.getElementById("filter_end").value;
+    const start = buildIsoFromInputs("filter_start_date", "filter_start_hour", "filter_start_minute", "filter_start_ampm");
+    const end = buildIsoFromInputs("filter_end_date", "filter_end_hour", "filter_end_minute", "filter_end_ampm");
     const category = document.getElementById("filter_category").value;
     const title = document.getElementById("filter_title").value;
     const location = document.getElementById("filter_location").value;
@@ -1112,9 +1190,14 @@
 
   async function createClubEvent(){
     if(!loadedClubId){ setStatus('club_detail_status', 'Load a club first.', 'error'); return; }
+    const startsAt = buildIsoFromInputs("club_event_start_date", "club_event_start_hour", "club_event_start_minute", "club_event_start_ampm");
+    if(!startsAt){
+      setStatus("club_detail_status", "Please provide a full start date and time (date, hour, minute, AM/PM).", "error");
+      return;
+    }
     const payload = {
       title: document.getElementById("club_event_title").value,
-      starts_at: document.getElementById("club_event_starts").value,
+      starts_at: startsAt,
       location: document.getElementById("club_event_location").value,
       capacity: Number(document.getElementById("club_event_capacity").value),
       price_cents: Number(document.getElementById("club_event_price").value),
