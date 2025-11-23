@@ -9,7 +9,7 @@ except ModuleNotFoundError:  # pragma: no cover - used in offline environments
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, select
+from sqlalchemy import create_engine, select, func
 from sqlalchemy.orm import sessionmaker
 
 from app.db import Base
@@ -174,6 +174,19 @@ def test_event_filter_by_title(client):
     results = filter_resp.json()
     assert results
     assert all("jam" in event["title"].lower() for event in results)
+
+
+def test_seed_creates_rich_demo_dataset():
+    with TestingSessionLocal() as session:
+        club_count = session.execute(select(func.count(models.Club.id))).scalar_one()
+        future_event_count = session.execute(
+            select(func.count(models.Event.id)).where(
+                models.Event.starts_at > datetime.utcnow()
+            )
+        ).scalar_one()
+
+    assert club_count >= 8
+    assert future_event_count >= 25
 
 
 def test_leader_can_delete_owned_club_event(client):
@@ -456,9 +469,12 @@ def test_club_creation_and_admin_approval(client):
 
 def test_join_club_and_approval_flow(client):
     with TestingSessionLocal() as session:
-        club = session.execute(
-            select(models.Club).where(models.Club.approved == True)
-        ).scalar_one()
+        club = (
+            session.execute(select(models.Club).where(models.Club.approved == True))
+            .scalars()
+            .first()
+        )
+        assert club is not None
         club_id = club.id
 
     student_headers = auth_headers("joiner@school.edu", "student")
@@ -493,9 +509,12 @@ def test_join_club_and_approval_flow(client):
 
 def test_my_clubs_and_leave_flow(client):
     with TestingSessionLocal() as session:
-        club = session.execute(
-            select(models.Club).where(models.Club.approved == True)
-        ).scalar_one()
+        club = (
+            session.execute(select(models.Club).where(models.Club.approved == True))
+            .scalars()
+            .first()
+        )
+        assert club is not None
         club_id = club.id
 
     student_headers = auth_headers("member@school.edu", "student")
